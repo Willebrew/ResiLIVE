@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Manager</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        form { margin-bottom: 20px; }
+        input, button { margin-right: 10px; padding: 5px; }
+        li { margin-bottom: 10px; }
+        .delete-btn { margin-left: 10px; }
+    </style>
+</head>
+<body>
+<h1>Player Manager</h1>
+<form id="addPlayerForm">
+    <input type="text" id="username" placeholder="Username" required>
+    <input type="text" id="playerId" placeholder="Player ID" required>
+    <button type="submit">Add Player</button>
+</form>
+<ul id="playerList"></ul>
+
+<script src="app.js"></script>
+</body>
+</html>
