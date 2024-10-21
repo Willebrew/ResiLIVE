@@ -622,7 +622,7 @@ async function removeExpiredCodes() {
 setInterval(removeExpiredCodes, 60000);
 
 // Route to serve the main API data file
-app.get('/api', (req, res) => {
+app.get('/api', limiter, (req, res) => {
     res.sendFile(path.join(__dirname, 'data.json'));
 });
 
