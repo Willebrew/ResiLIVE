@@ -8,10 +8,17 @@ const session = require('express-session');
 const bcrypt = require('bcrypt');
 const path = require('path');
 const fs = require('fs').promises;
+const RateLimit = require('express-rate-limit');
 const accessLogsFile = path.join(__dirname, 'access_logs.json');
 const app = express();
 const port = 3000;
 const lastAccessTimes = {};
+
+// Rate limiter setup: maximum of 100 requests per 15 minutes
+const limiter = RateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // max 100 requests per windowMs
+});
 
 // Middleware setup
 app.use(express.json());
@@ -628,7 +635,7 @@ app.get('/login.html', (req, res) => {
 });
 
 // Route to serve the index page
-app.get('/index.html', requireAuth, (req, res) => {
+app.get('/index.html', requireAuth, limiter, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
