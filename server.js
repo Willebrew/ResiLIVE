@@ -625,7 +625,7 @@ app.get('/api', (req, res) => {
 });
 
 // Route to serve the login page
-app.get('/', (req, res) => {
+app.get('/', limiter, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
