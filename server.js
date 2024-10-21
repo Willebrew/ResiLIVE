@@ -9,6 +9,7 @@ const bcrypt = require('bcrypt');
 const path = require('path');
 const fs = require('fs').promises;
 const RateLimit = require('express-rate-limit');
+const lusca = require('lusca');
 const accessLogsFile = path.join(__dirname, 'access_logs.json');
 const app = express();
 const port = 3000;
@@ -29,6 +30,7 @@ app.use(session({
     saveUninitialized: true,
     cookie: { secure: true, httpOnly: true }
 }));
+app.use(lusca.csrf());
 
 // Route to serve the main API data file
 app.get('/api', (req, res) => {
