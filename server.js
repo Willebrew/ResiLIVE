@@ -33,7 +33,7 @@ app.use(session({
 app.use(lusca.csrf());
 
 // Route to serve the main API data file
-app.get('/api', (req, res) => {
+app.get('/api', limiter, (req, res) => {
     res.sendFile(path.join(__dirname, 'data.json'));
 });
 
