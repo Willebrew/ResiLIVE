@@ -1,22 +1,3 @@
 {
-  "communities": [
-    {
-      "id": "1729416485094",
-      "name": "Starwood",
-      "addresses": [
-        {
-          "id": "1729416491468",
-          "street": "4143 Normandy Ave",
-          "people": [
-            {
-              "id": "1729416501561",
-              "username": "killebrew2",
-              "playerId": "37064184"
-            }
-          ],
-          "codes": []
-        }
-      ]
-    }
-  ]
+  "communities": []
 }
