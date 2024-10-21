@@ -27,7 +27,7 @@ app.use(session({
     secret: 'your-secret-key',
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false }
+    cookie: { secure: true, httpOnly: true }
 }));
 
 // Route to serve the main API data file
