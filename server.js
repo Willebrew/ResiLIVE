@@ -630,7 +630,7 @@ app.get('/', (req, res) => {
 });
 
 // Route to serve the login page
-app.get('/login.html', (req, res) => {
+app.get('/login.html', limiter, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
