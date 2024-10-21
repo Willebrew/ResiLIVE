@@ -54,4 +54,4 @@ Contributions are welcome! Please feel free to submit a Pull Request if you have
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [Apache License](LICENSE).
