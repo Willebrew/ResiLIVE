@@ -370,9 +370,7 @@ async function removeCode(addressId, codeId) {
     }
 }
 
-// Event listeners for adding community and address
 document.querySelector('.sidebar .add-btn').addEventListener('click', addCommunity);
 document.querySelector('main .add-btn').addEventListener('click', addAddress);
 
-// Initial data fetch
 fetchData();

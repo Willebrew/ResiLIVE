@@ -17,6 +17,61 @@ let selectedCommunity = null;
 let selectedAddress = null;
 
 /**
+ * Flag indicating if the user is an admin.
+ * @type {boolean}
+ */
+let isAdmin = false;
+
+/**
+ * Updates the username displayed in the UI.
+ * @param {string} username - The username to display.
+ */
+function updateUserName(username) {
+    const userNameSpan = document.querySelector('#userName span');
+    if (userNameSpan) {
+        userNameSpan.textContent = username || 'Guest';
+    }
+}
+
+/**
+ * Checks the login status of the user and updates the UI accordingly.
+ * @async
+ * @function checkLoginStatus
+ * @returns {Promise<void>}
+ */
+async function checkLoginStatus() {
+    try {
+        const response = await fetch('/api/check-auth');
+        if (response.ok) {
+            const data = await response.json();
+            updateUserName(data.username);
+
+            console.log('User role:', data.role);
+
+            isAdmin = data.role === 'admin';
+
+            if (isAdmin) {
+                document.getElementById('allowedUsersManagement').style.display = 'block';
+            } else {
+                document.getElementById('allowedUsersManagement').remove();
+                const addCommunityBtn = document.getElementById('12');
+                if (addCommunityBtn) addCommunityBtn.remove();
+            }
+
+            fetchData();
+        } else {
+            updateUserName('Guest');
+            window.location.href = '/login.html';
+        }
+    } catch (error) {
+        console.error('Error checking login status:', error);
+        updateUserName('Guest');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', checkLoginStatus);
+
+/**
  * Fetches community data from the server and updates the UI.
  * @async
  * @function fetchData
@@ -25,15 +80,134 @@ let selectedAddress = null;
 async function fetchData() {
     try {
         const response = await fetch('/api/communities');
+        if (response.status === 401) {
+            window.location.href = '/login.html';
+            return;
+        }
         communities = await response.json();
         renderCommunities();
         if (communities.length > 0) {
             selectCommunity(communities[0].id);
         }
+
+        if (communities.length >= 9) {
+            const addButton = document.getElementById('12');
+            if (addButton) {
+                addButton.remove();
+            }
+        }
     } catch (error) {
         console.error('Error fetching data:', error);
     }
 }
+
+/**
+ * Logs out the user by sending a POST request to the server.
+ * @async
+ * @function logout
+ * @returns {Promise<void>}
+ */
+async function logout() {
+    try {
+        const response = await fetch('/api/logout', { method: 'POST' });
+        if (response.ok) {
+            window.location.href = '/login.html';
+        } else {
+            console.error('Logout failed');
+        }
+    } catch (error) {
+        console.error('Error logging out:', error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const showLogsBtn = document.getElementById('showLogsBtn');
+    if (showLogsBtn) {
+        showLogsBtn.addEventListener('click', function() {
+            showLogs(selectedCommunity.name);
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const addAddressBtn = document.getElementById('addAddressBtn');
+    if (addAddressBtn) {
+        addAddressBtn.addEventListener('click', addAddress);
+    }
+});
+
+/**
+ * Displays logs for a specific community.
+ * @param {string} communityName - The name of the community to show logs for.
+ */
+function showLogs(communityName) {
+    document.getElementById('logPopupTitle').textContent = `Logs for ${communityName}`;
+    document.getElementById('logPopup').style.display = 'block';
+    updateLogs(communityName);
+
+    if (window.logUpdateInterval) {
+        clearInterval(window.logUpdateInterval);
+    }
+
+    window.logUpdateInterval = setInterval(() => updateLogs(communityName), 5000);
+}
+
+/**
+ * Closes the log popup and clears the log update interval.
+ */
+function closeLogPopup() {
+    document.getElementById('logPopup').style.display = 'none';
+    if (window.logUpdateInterval) {
+        clearInterval(window.logUpdateInterval);
+    }
+}
+
+/**
+ * Fetches and updates logs for a specific community.
+ * @async
+ * @function updateLogs
+ * @param {string} communityName - The name of the community to update logs for.
+ * @returns {Promise<void>}
+ */
+async function updateLogs(communityName) {
+    try {
+        const response = await fetch(`/api/communities/${encodeURIComponent(communityName)}/logs`);
+        if (response.ok) {
+            const logs = await response.json();
+            displayLogs(logs);
+        } else {
+            console.error('Failed to fetch logs:', response.statusText);
+        }
+    } catch (error) {
+        console.error('Error fetching logs:', error);
+    }
+}
+
+/**
+ * Displays logs in the UI.
+ * @param {Array<Object>} logs - The logs to display.
+ */
+function displayLogs(logs) {
+    const logContent = document.getElementById('logContent');
+    logContent.innerHTML = '';
+
+    logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    logs.forEach(log => {
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry';
+        const timestamp = new Date(log.timestamp).toLocaleString();
+        logEntry.innerHTML = `
+            <span class="timestamp">${timestamp}</span><br>
+            <span class="player">${log.player}</span>: 
+            <span class="action">${log.action}</span>
+        `;
+        logContent.appendChild(logEntry);
+    });
+}
+
+document.getElementById('logoutBtn').addEventListener('click', logout);
+console.log('User role:', data.role);
 
 /**
  * Renders the list of communities in the UI.
@@ -46,7 +220,7 @@ function renderCommunities() {
     communities.forEach(community => {
         const li = document.createElement('li');
         li.innerHTML = `
-            <button class="remove-btn" onclick="removeCommunity('${community.id}')">-</button>
+            ${isAdmin ? `<button class="remove-btn" onclick="removeCommunity('${community.id}')">-</button>` : ''}
             <span>${community.name}</span>
         `;
         li.onclick = (event) => {
@@ -73,6 +247,7 @@ function selectCommunity(communityId) {
     renderAddresses();
     document.getElementById('communityName').textContent = selectedCommunity.name;
     renderCommunities();
+    renderAllowedUsers();
 }
 
 /**
@@ -172,20 +347,37 @@ function renderCodes(address) {
  * @returns {Promise<void>}
  */
 async function addCommunity() {
-    const name = prompt('Enter community name:');
+    if (communities.length >= 9) {
+        alert('Maximum number of communities reached');
+        return;
+    }
+
+    const name = prompt('Enter community name (no spaces allowed):');
     if (name) {
+        if (name.includes(' ')) {
+            alert('Community name cannot contain spaces. Please try again.');
+            return;
+        }
+
         try {
             const response = await fetch('/api/communities', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name })
             });
-            const newCommunity = await response.json();
-            communities.push(newCommunity);
-            renderCommunities();
-            selectCommunity(newCommunity.id);
+            if (response.ok) {
+                const newCommunity = await response.json();
+                communities.push(newCommunity);
+                renderCommunities();
+                selectCommunity(newCommunity.id);
+                updateAddCommunityButtonVisibility();
+            } else {
+                const errorData = await response.json();
+                alert(errorData.error || 'Failed to add community');
+            }
         } catch (error) {
             console.error('Error adding community:', error);
+            alert('An error occurred while adding the community');
         }
     }
 }
@@ -209,8 +401,41 @@ async function removeCommunity(communityId) {
                 selectedCommunity = null;
                 renderAddresses();
             }
+            updateAddCommunityButtonVisibility();
         } catch (error) {
             console.error('Error removing community:', error);
+        }
+    }
+}
+
+/**
+ * Updates the visibility of the "Add Community" button based on the number of communities.
+ * If the number of communities is less than the maximum allowed, the button is displayed.
+ * If the number of communities is equal to or greater than the maximum allowed, the button is removed.
+ * @function updateAddCommunityButtonVisibility
+ * @returns {void}
+ */
+function updateAddCommunityButtonVisibility() {
+    const MAX_COMMUNITIES = 9;
+    const sidebarTop = document.querySelector('.sidebar-top');
+    let addButton = document.getElementById('12');
+
+    if (communities.length >= 9) {
+        if (addButton) addButton.remove();
+    } else {
+        if (!addButton) {
+            addButton = document.createElement('button');
+            addButton.id = '12';
+            addButton.className = 'add-btn';
+            addButton.onclick = addCommunity;
+            addButton.textContent = '+';
+
+            const communityList = document.getElementById('communityList');
+            if (communityList && communityList.nextSibling) {
+                sidebarTop.insertBefore(addButton, communityList.nextSibling);
+            } else {
+                sidebarTop.appendChild(addButton);
+            }
         }
     }
 }
@@ -370,9 +595,99 @@ async function removeCode(addressId, codeId) {
     }
 }
 
-// Event listeners for adding community and address
-document.querySelector('.sidebar .add-btn').addEventListener('click', addCommunity);
+/**
+ * Updates the list of allowed users for the selected community by sending a PUT request to the server.
+ * @async
+ * @function updateAllowedUsers
+ * @returns {Promise<void>}
+ */
+async function updateAllowedUsers() {
+    if (!selectedCommunity) {
+        alert('No community selected');
+        return;
+    }
+
+    const allowedUsersInput = document.getElementById('allowedUsersInput').value;
+    const newAllowedUsers = allowedUsersInput.split(',').map(user => user.trim()).filter(Boolean);
+    const allowedUsersSet = new Set([...selectedCommunity.allowedUsers, ...newAllowedUsers]);
+
+    try {
+        const response = await fetch(`/api/communities/${selectedCommunity.id}/allowed-users`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ allowedUsers: Array.from(allowedUsersSet) })
+        });
+
+        if (response.ok) {
+            alert('Allowed users updated successfully');
+            selectedCommunity.allowedUsers = Array.from(allowedUsersSet);
+            renderAllowedUsers();
+        } else {
+            const errorData = await response.json();
+            alert(`Error: ${errorData.error}`);
+        }
+    } catch (error) {
+        console.error('Error updating allowed users:', error);
+    }
+}
+
+/**
+ * Renders the list of allowed users for the selected community in the UI.
+ * @function renderAllowedUsers
+ * @returns {void}
+ */
+function renderAllowedUsers() {
+    const allowedUsersDropdown = document.getElementById('allowedUsersDropdown');
+    allowedUsersDropdown.innerHTML = '';
+
+    if (selectedCommunity && selectedCommunity.allowedUsers) {
+        selectedCommunity.allowedUsers.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user;
+            option.textContent = user;
+            allowedUsersDropdown.appendChild(option);
+        });
+    }
+    document.getElementById('allowedUsersManagement').style.display = selectedCommunity ? 'block' : 'none';
+}
+
+/**
+ * Removes the selected allowed user from the list and updates the server.
+ * @function removeAllowedUser
+ * @returns {void}
+ */
+function removeAllowedUser() {
+    const allowedUsersDropdown = document.getElementById('allowedUsersDropdown');
+
+    Array.from(allowedUsersDropdown.selectedOptions).forEach(option => {
+        selectedCommunity.allowedUsers = selectedCommunity.allowedUsers.filter(u => u !== option.value);
+    });
+    updateAllowedUsers();
+}
+
+/**
+ * Removes the selected users from the allowed users list and updates the server.
+ * @function removeSelectedUsers
+ * @returns {void}
+ */
+function removeSelectedUsers() {
+    const allowedUsersDropdown = document.getElementById('allowedUsersDropdown');
+
+    Array.from(allowedUsersDropdown.selectedOptions).forEach(option => {
+        selectedCommunity.allowedUsers = selectedCommunity.allowedUsers.filter(u => u !== option.value);
+    });
+    updateAllowedUsers();
+}
+
+
+if (isAdmin) {
+    const addCommunityBtn = document.querySelector('.sidebar .add-btn');
+    if (addCommunityBtn) {
+        addCommunityBtn.addEventListener('click', addCommunity);
+    }
+}
 document.querySelector('main .add-btn').addEventListener('click', addAddress);
 
-// Initial data fetch
 fetchData();

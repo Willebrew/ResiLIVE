@@ -1,0 +1,86 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #1a1a1a;
+    color: #ffffff;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    background-color: #252525;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    width: 300px;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #4a90e2;
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+input {
+    margin-bottom: 15px;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: #3a3a3a;
+    color: #ffffff;
+}
+
+input::placeholder {
+    color: #999;
+}
+
+.login-btn {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+    background-color: #4a90e2;
+    color: white;
+}
+
+.login-btn:hover {
+    background-color: #3a7fcb;
+}
+
+.register-message {
+    text-align: center;
+    margin-top: 20px;
+    color: #999;
+    font-size: 14px;
+}
+
+#allowedUsersDropdown {
+    width: 100%;
+    height: auto;
+}
+
+.remove-btn {
+    background-color: #ff4136;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+    cursor: pointer;
+}

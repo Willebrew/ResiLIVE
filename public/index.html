@@ -9,20 +9,48 @@
 <body>
 <div class="container">
     <aside class="sidebar">
-        <h1>ResiLIVE</h1>
-        <p class="subtitle">a product of JAW Development</p>
-        <h2>Communities</h2>
-        <ul id="communityList">
-        </ul>
-        <button class="add-btn">+</button>
+        <div class="sidebar-top">
+            <h1>ResiLIVE</h1>
+            <p class="subtitle">a product of JAW Development</p>
+            <h2>Communities</h2>
+            <ul id="communityList"></ul>
+            <button class="add-btn" id="12" onclick="addCommunity()">+</button>
+        </div>
+
+        <div class="sidebar-bottom">
+            <button id="showLogsBtn" class="log-btn">
+                <span class="log-btn-icon">📋</span>
+                <span class="log-btn-text">Show Logs</span>
+            </button>
+
+            <div id="allowedUsersManagement">
+                <h3>Allowed Users</h3>
+                <select id="allowedUsersDropdown" multiple></select>
+                <input type="text" id="allowedUsersInput" placeholder="Add usernames, separated by commas">
+                <div class="button-group">
+                    <button class="add-btn" onclick="updateAllowedUsers()">+</button>
+                    <button class="remove-btn-user" onclick="removeSelectedUsers()">-</button>
+                </div>
+            </div>
+
+            <div class="user-section">
+                <p id="userName">Welcome, <span></span></p>
+                <button id="logoutBtn" class="logout-btn">Logout</button>
+            </div>
+        </div>
     </aside>
     <main>
+        <div id="logPopup" class="popup">
+            <div class="popup-content">
+                <h2 id="logPopupTitle"></h2>
+                <div id="logContent"></div>
+                <button class="close-btn-popup" onclick="closeLogPopup()">Close</button>
+            </div>
+        </div>
         <h2 id="communityName">Please create a Community</h2>
         <h3>Addresses:</h3>
-        <ul id="addressList">
-        </ul>
-        <button class="add-btn">+</button>
-
+        <ul id="addressList"></ul>
+        <button id="addAddressBtn" class="add-btn">+</button>
         <div id="addressDetails" style="display: none;">
             <h3 id="selectedAddress"></h3>
             <h4>User IDs:</h4>
