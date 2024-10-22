@@ -15,13 +15,13 @@ const app = express();
 const port = 3000;
 const lastAccessTimes = {};
 
-app.set('trust proxy', 1);
-
 // Rate limiter setup: maximum of 100 requests per 15 minutes
 const limiter = RateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // max 100 requests per windowMs
 });
+
+app.set('trust proxy', 1);
 
 // Middleware setup
 app.use(express.json());
@@ -33,24 +33,14 @@ app.use(session({
     cookie: { secure: true } // SET TO FALSE FOR DEBUGGING
 }));
 
-app.use(lusca.csrf());
-
-/**
- * Bypasses CSRF protection for a specific route.
- * @param {Object} req - The request object.
- * @param req
- * @param res
- * @param next
- */
-function bypassCSRF(req, res, next) {
-    if (req.path === '/api/log-access') {
-        next();
-    } else {
+// Apply CSRF protection to all other routes
+app.use((req, res, next) => {
+    if (req.path !== '/api/log-access') {
         lusca.csrf()(req, res, next);
+    } else {
+        next();
     }
-}
-
-app.use(bypassCSRF);
+});
 
 // Route to get CSRF token
 app.get('/csrf-token', (req, res) => {
