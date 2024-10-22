@@ -23,6 +23,52 @@ let selectedAddress = null;
 let isAdmin = false;
 
 /**
+ * Array to store user objects.
+ * @type {*[]}
+ */
+let users = [];
+
+
+/**
+ * Variable to store the CSRF token.
+ * @type {string}
+ */
+let csrfToken;
+
+/**
+ * Event listener for the DOMContentLoaded event to fetch the CSRF token when the document is fully loaded.
+ * @event
+ */
+document.addEventListener('DOMContentLoaded', async () => {
+    await fetchCsrfToken();
+});
+
+/**
+ * Fetches the CSRF token from the server and stores it in the csrfToken variable.
+ * If a hidden input field with the ID 'csrfToken' exists, sets its value to the fetched CSRF token.
+ * @async
+ * @function fetchCsrfToken
+ * @returns {Promise<void>}
+ */
+async function fetchCsrfToken() {
+    try {
+        const response = await fetch('/csrf-token');
+        if (!response.ok) {
+            throw new Error('Failed to fetch CSRF token');
+        }
+        const data = await response.json();
+        csrfToken = data.csrfToken;
+
+        const csrfInput = document.getElementById('csrfToken');
+        if (csrfInput) {
+            csrfInput.value = csrfToken;
+        }
+    } catch (error) {
+        console.error('Error fetching CSRF token:', error);
+    }
+}
+
+/**
  * Updates the username displayed in the UI.
  * @param {string} username - The username to display.
  */
@@ -46,8 +92,6 @@ async function checkLoginStatus() {
             const data = await response.json();
             updateUserName(data.username);
 
-            console.log('User role:', data.role);
-
             isAdmin = data.role === 'admin';
 
             if (isAdmin) {
@@ -55,7 +99,9 @@ async function checkLoginStatus() {
             } else {
                 document.getElementById('allowedUsersManagement').remove();
                 const addCommunityBtn = document.getElementById('12');
+                const showUsersBtn = document.getElementById('showUsersBtn');
                 if (addCommunityBtn) addCommunityBtn.remove();
+                if (addCommunityBtn) showUsersBtn.remove();
             }
 
             fetchData();
@@ -70,6 +116,140 @@ async function checkLoginStatus() {
 }
 
 document.addEventListener('DOMContentLoaded', checkLoginStatus);
+
+/**
+ * Fetches users from the server and updates the UI.
+ * @returns {Promise<void>}
+ */
+async function fetchUsers() {
+    try {
+        const response = await fetch('/api/users');
+        if (response.ok) {
+            users = await response.json();
+            renderUsers();
+        } else {
+            console.error('Failed to fetch users');
+        }
+    } catch (error) {
+        console.error('Error fetching users:', error);
+    }
+}
+
+/**
+ * Renders the list of users in the UI.
+ * Filters users with the role 'user' and creates a user item for each.
+ * Each user item includes the username and a button to remove the user.
+ * @function renderUsers
+ * @returns {void}
+ */
+function renderUsers() {
+    const usersList = document.getElementById('usersList');
+    usersList.innerHTML = '';
+    users.forEach(user => {
+        if (user.role === 'user') {
+            const userElement = document.createElement('div');
+            userElement.className = 'user-item';
+            userElement.innerHTML = `
+                <span>${user.username}</span>
+                <button onclick="removeUser('${user.id}')" class="remove-btn">-</button>
+            `;
+            usersList.appendChild(userElement);
+        }
+    });
+}
+
+/**
+ * Adds a new user by sending a POST request to the server with the provided username and password.
+ * If the user is successfully added, fetches the updated list of users and clears the input fields.
+ * @async
+ * @function addUser
+ * @returns {Promise<void>}
+ */
+async function addUser() {
+    const username = document.getElementById('newUsername').value;
+    const password = document.getElementById('newPassword').value;
+    if (username && password) {
+        try {
+            const response = await fetch('/api/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({ username, password }),
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                fetchUsers();
+                document.getElementById('newUsername').value = '';
+                document.getElementById('newPassword').value = '';
+                alert('User added successfully');
+            } else {
+                const errorData = await response.json();
+                console.error('Failed to add user:', errorData.error);
+                alert(errorData.error || 'Failed to add user. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error adding user:', error);
+            alert('An error occurred while adding the user. Please try again.');
+        }
+    } else {
+        alert('Please enter both username and password.');
+    }
+}
+
+/**
+ * Removes a user by sending a DELETE request to the server with the provided user ID.
+ * Prompts the user for confirmation before proceeding with the deletion.
+ * If the user is successfully removed, fetches the updated list of users.
+ * @async
+ * @function removeUser
+ * @param {string} userId - The ID of the user to be removed.
+ * @returns {Promise<void>}
+ */
+async function removeUser(userId) {
+    if (confirm('Are you sure you want to remove this user?')) {
+        try {
+            const response = await fetch(`/api/users/${userId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                fetchUsers();
+                alert('User removed successfully');
+
+                if (data.updatedCommunities) {
+                    data.updatedCommunities.forEach(updatedCommunity => {
+                        const communityIndex = communities.findIndex(c => c.id === updatedCommunity.id);
+                        if (communityIndex !== -1) {
+                            communities[communityIndex].allowedUsers = updatedCommunity.allowedUsers;
+                        }
+                    });
+                }
+
+                if (selectedCommunity && data.updatedCommunities.some(c => c.id === selectedCommunity.id)) {
+                    renderAllowedUsers();
+                }
+            } else {
+                const errorData = await response.json();
+                console.error('Failed to remove user:', errorData.error);
+                alert(errorData.error || 'Failed to remove user. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error removing user:', error);
+            alert('An error occurred while removing the user. Please try again.');
+        }
+    }
+}
+
+document.getElementById('showUsersBtn').addEventListener('click', showUsersPopup);
 
 /**
  * Fetches community data from the server and updates the UI.
@@ -109,7 +289,15 @@ async function fetchData() {
  */
 async function logout() {
     try {
-        const response = await fetch('/api/logout', { method: 'POST' });
+        const response = await fetch('/api/logout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            credentials: 'include'
+        });
+
         if (response.ok) {
             window.location.href = '/login.html';
         } else {
@@ -125,6 +313,15 @@ document.addEventListener('DOMContentLoaded', function() {
     if (showLogsBtn) {
         showLogsBtn.addEventListener('click', function() {
             showLogs(selectedCommunity.name);
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const showLogsBtn = document.getElementById('showUsersBtn');
+    if (showLogsBtn) {
+        showLogsBtn.addEventListener('click', function() {
+            showUsers()
         });
     }
 });
@@ -153,6 +350,14 @@ function showLogs(communityName) {
 }
 
 /**
+ * Displays users in the system.
+ */
+function showUsersPopup() {
+    document.getElementById('usersPopup').style.display = 'block';
+    fetchUsers();
+}
+
+/**
  * Closes the log popup and clears the log update interval.
  */
 function closeLogPopup() {
@@ -160,6 +365,13 @@ function closeLogPopup() {
     if (window.logUpdateInterval) {
         clearInterval(window.logUpdateInterval);
     }
+}
+
+/**
+ * Closes the user popup.
+ */
+function closeUsersPopup() {
+    document.getElementById('usersPopup').style.display = 'none';
 }
 
 /**
@@ -207,7 +419,6 @@ function displayLogs(logs) {
 }
 
 document.getElementById('logoutBtn').addEventListener('click', logout);
-console.log('User role:', data.role);
 
 /**
  * Renders the list of communities in the UI.
@@ -362,9 +573,14 @@ async function addCommunity() {
         try {
             const response = await fetch('/api/communities', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({ name }),
+                credentials: 'include'
             });
+
             if (response.ok) {
                 const newCommunity = await response.json();
                 communities.push(newCommunity);
@@ -392,18 +608,32 @@ async function addCommunity() {
 async function removeCommunity(communityId) {
     if (confirm('Are you sure you want to remove this community?')) {
         try {
-            await fetch(`/api/communities/${communityId}`, { method: 'DELETE' });
-            communities = communities.filter(c => c.id !== communityId);
-            renderCommunities();
-            if (communities.length > 0) {
-                selectCommunity(communities[0].id);
+            const response = await fetch(`/api/communities/${communityId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                communities = communities.filter(c => c.id !== communityId);
+                renderCommunities();
+                if (communities.length > 0) {
+                    selectCommunity(communities[0].id);
+                } else {
+                    selectedCommunity = null;
+                    renderAddresses();
+                }
+                updateAddCommunityButtonVisibility();
             } else {
-                selectedCommunity = null;
-                renderAddresses();
+                console.error('Failed to remove community:', response.statusText);
+                alert('Failed to remove community. Please try again.');
             }
-            updateAddCommunityButtonVisibility();
         } catch (error) {
             console.error('Error removing community:', error);
+            alert('An error occurred while removing the community. Please try again.');
         }
     }
 }
@@ -420,7 +650,7 @@ function updateAddCommunityButtonVisibility() {
     const sidebarTop = document.querySelector('.sidebar-top');
     let addButton = document.getElementById('12');
 
-    if (communities.length >= 9) {
+    if (communities.length >= MAX_COMMUNITIES) {
         if (addButton) addButton.remove();
     } else {
         if (!addButton) {
@@ -453,15 +683,24 @@ async function addAddress() {
         try {
             const response = await fetch(`/api/communities/${selectedCommunity.id}/addresses`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ street })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({ street }),
+                credentials: 'include'
             });
-            const newAddress = await response.json();
-            if (!selectedCommunity.addresses) {
-                selectedCommunity.addresses = [];
+
+            if (response.ok) {
+                const newAddress = await response.json();
+                if (!selectedCommunity.addresses) {
+                    selectedCommunity.addresses = [];
+                }
+                selectedCommunity.addresses.push(newAddress);
+                renderAddresses();
+            } else {
+                console.error('Failed to add address:', response.statusText);
             }
-            selectedCommunity.addresses.push(newAddress);
-            renderAddresses();
         } catch (error) {
             console.error('Error adding address:', error);
         }
@@ -479,9 +718,21 @@ async function removeAddress(addressId) {
     if (!selectedCommunity) return;
     if (confirm('Are you sure you want to remove this address?')) {
         try {
-            await fetch(`/api/communities/${selectedCommunity.id}/addresses/${addressId}`, { method: 'DELETE' });
-            selectedCommunity.addresses = selectedCommunity.addresses.filter(a => a.id !== addressId);
-            renderAddresses();
+            const response = await fetch(`/api/communities/${selectedCommunity.id}/addresses/${addressId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                selectedCommunity.addresses = selectedCommunity.addresses.filter(a => a.id !== addressId);
+                renderAddresses();
+            } else {
+                console.error('Failed to remove address:', response.statusText);
+            }
         } catch (error) {
             console.error('Error removing address:', error);
         }
@@ -504,15 +755,24 @@ async function addUserId(addressId) {
         try {
             const response = await fetch(`/api/communities/${selectedCommunity.id}/addresses/${addressId}/people`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, playerId })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({ username, playerId }),
+                credentials: 'include'
             });
-            const newUserId = await response.json();
-            if (!address.people) {
-                address.people = [];
+
+            if (response.ok) {
+                const newUserId = await response.json();
+                if (!address.people) {
+                    address.people = [];
+                }
+                address.people.push(newUserId);
+                renderUserIds(address);
+            } else {
+                console.error('Failed to add user ID:', response.statusText);
             }
-            address.people.push(newUserId);
-            renderUserIds(address);
         } catch (error) {
             console.error('Error adding user ID:', error);
         }
@@ -532,9 +792,21 @@ async function removeUserId(addressId, userIdId) {
     if (!address) return;
     if (confirm('Are you sure you want to remove this user ID?')) {
         try {
-            await fetch(`/api/communities/${selectedCommunity.id}/addresses/${addressId}/people/${userIdId}`, { method: 'DELETE' });
-            address.people = address.people.filter(u => u.id !== userIdId);
-            renderUserIds(address);
+            const response = await fetch(`/api/communities/${selectedCommunity.id}/addresses/${addressId}/people/${userIdId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                address.people = address.people.filter(u => u.id !== userIdId);
+                renderUserIds(address);
+            } else {
+                console.error('Failed to remove user ID:', response.statusText);
+            }
         } catch (error) {
             console.error('Error removing user ID:', error);
         }
@@ -558,15 +830,24 @@ async function addCode(addressId) {
         try {
             const response = await fetch(`/api/communities/${selectedCommunity.id}/addresses/${addressId}/codes`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ description, code, expiresAt: new Date(expiresAt).toISOString() })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({ description, code, expiresAt: new Date(expiresAt).toISOString() }),
+                credentials: 'include'
             });
-            const newCode = await response.json();
-            if (!address.codes) {
-                address.codes = [];
+
+            if (response.ok) {
+                const newCode = await response.json();
+                if (!address.codes) {
+                    address.codes = [];
+                }
+                address.codes.push(newCode);
+                renderCodes(address);
+            } else {
+                console.error('Failed to add code:', response.statusText);
             }
-            address.codes.push(newCode);
-            renderCodes(address);
         } catch (error) {
             console.error('Error adding code:', error);
         }
@@ -586,12 +867,55 @@ async function removeCode(addressId, codeId) {
     if (!address) return;
     if (confirm('Are you sure you want to remove this code?')) {
         try {
-            await fetch(`/api/communities/${selectedCommunity.id}/addresses/${addressId}/codes/${codeId}`, { method: 'DELETE' });
-            address.codes = address.codes.filter(c => c.id !== codeId);
-            renderCodes(address);
+            const response = await fetch(`/api/communities/${selectedCommunity.id}/addresses/${addressId}/codes/${codeId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                address.codes = address.codes.filter(c => c.id !== codeId);
+                renderCodes(address);
+            } else {
+                console.error('Failed to remove code:', response.statusText);
+            }
         } catch (error) {
             console.error('Error removing code:', error);
         }
+    }
+}
+
+/**
+ * Checks if a user exists in the system.
+ * @async
+ * @function checkUserExists
+ * @param {string} username - The username to check.
+ * @returns {Promise<boolean>} - True if the user exists, false otherwise.
+ */
+async function checkUserExists(username) {
+    try {
+        const response = await fetch(`/api/users/exists/${encodeURIComponent(username)}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            return data.exists;
+        } else {
+            console.error('Failed to check user existence:', response.statusText);
+            return false;
+        }
+    } catch (error) {
+        console.error('Error checking user existence:', error);
+        return false;
     }
 }
 
@@ -615,21 +939,29 @@ async function updateAllowedUsers() {
         const response = await fetch(`/api/communities/${selectedCommunity.id}/allowed-users`, {
             method: 'PUT',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
             },
-            body: JSON.stringify({ allowedUsers: Array.from(allowedUsersSet) })
+            body: JSON.stringify({ allowedUsers: Array.from(allowedUsersSet) }),
+            credentials: 'include'
         });
 
         if (response.ok) {
-            alert('Allowed users updated successfully');
-            selectedCommunity.allowedUsers = Array.from(allowedUsersSet);
+            const data = await response.json();
+            alert(data.message);
+            if (data.warning) {
+                alert(data.warning);
+            }
+            selectedCommunity.allowedUsers = data.validUsers;
             renderAllowedUsers();
+            document.getElementById('allowedUsersInput').value = '';
         } else {
             const errorData = await response.json();
             alert(`Error: ${errorData.error}`);
         }
     } catch (error) {
         console.error('Error updating allowed users:', error);
+        alert('An error occurred while updating allowed users. Please try again.');
     }
 }
 
@@ -688,6 +1020,8 @@ if (isAdmin) {
         addCommunityBtn.addEventListener('click', addCommunity);
     }
 }
+
+document.addEventListener('DOMContentLoaded', fetchCsrfToken);
 document.querySelector('main .add-btn').addEventListener('click', addAddress);
 
 fetchData();

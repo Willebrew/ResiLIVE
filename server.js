@@ -28,9 +28,15 @@ app.use(session({
     secret: 'your-secret-key',
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: true, httpOnly: true }
+    cookie: { secure: false }
 }));
+
 app.use(lusca.csrf());
+
+// Route to get CSRF token
+app.get('/csrf-token', (req, res) => {
+    res.json({ csrfToken: req.csrfToken() });
+});
 
 // Route to serve the main API data file
 app.get('/api', limiter, (req, res) => {
@@ -268,6 +274,70 @@ app.get('/api/check-auth', (req, res) => {
     }
 });
 
+// Get all users (admin only)
+app.get('/api/users', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const users = await readData(usersFile);
+        res.json(users.users);
+    } catch (error) {
+        errorHandler(res, error, 'Error fetching users');
+    }
+});
+
+// Add a new user (admin only)
+app.post('/api/users', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        let users = await readData(usersFile);
+
+        if (users.users.find(u => u.username === username)) {
+            return res.status(400).json({ error: 'Username already exists' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = { id: Date.now().toString(), username, password: hashedPassword, role: 'user' };
+        users.users.push(newUser);
+        await writeData(usersFile, users);
+
+        res.status(201).json({ message: 'User added successfully' });
+    } catch (error) {
+        errorHandler(res, error, 'Error adding user');
+    }
+});
+
+// Remove a user (admin only)
+app.delete('/api/users/:id', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        let users = await readData(usersFile);
+        const userToRemove = users.users.find(user => user.id === req.params.id);
+
+        if (!userToRemove) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        users.users = users.users.filter(user => user.id !== req.params.id);
+        await writeData(usersFile, users);
+
+        // Remove user from allowed users in all communities
+        let jsonData = await readData(dataFile);
+        const updatedCommunities = [];
+
+        jsonData.communities = jsonData.communities.map(community => {
+            if (community.allowedUsers.includes(userToRemove.username)) {
+                community.allowedUsers = community.allowedUsers.filter(username => username !== userToRemove.username);
+                updatedCommunities.push({ id: community.id, allowedUsers: community.allowedUsers });
+            }
+            return community;
+        });
+
+        await writeData(dataFile, jsonData);
+
+        res.status(200).json({ message: 'User removed successfully', updatedCommunities });
+    } catch (error) {
+        errorHandler(res, error, 'Error removing user');
+    }
+});
+
 // Route to add a new user by an admin
 app.post('/api/admin/add-user', requireAuth, async (req, res) => {
     try {
@@ -328,12 +398,32 @@ app.put('/api/communities/:id/allowed-users', requireAuth, requireAdmin, async (
     try {
         const { allowedUsers } = req.body;
         let jsonData = await readData(dataFile);
+        let users = await readData(usersFile);
         const community = jsonData.communities.find(c => c.id === req.params.id);
 
         if (community) {
-            community.allowedUsers = allowedUsers;
+            const validUsers = [];
+            const invalidUsers = [];
+
+            for (const username of allowedUsers) {
+                const user = users.users.find(u => u.username === username);
+                if (user && user.role !== 'admin') {
+                    validUsers.push(username);
+                } else {
+                    invalidUsers.push(username);
+                }
+            }
+
+            community.allowedUsers = validUsers;
             await writeData(dataFile, jsonData);
-            res.status(200).json({ message: 'Allowed users updated successfully' });
+
+            let message = 'Allowed users updated successfully';
+            let warning = null;
+            if (invalidUsers.length > 0) {
+                warning = `The following users were not added: ${invalidUsers.join(', ')}`;
+            }
+
+            res.status(200).json({ message, warning, validUsers });
         } else {
             res.status(404).json({ error: 'Community not found' });
         }

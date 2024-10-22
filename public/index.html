@@ -18,6 +18,10 @@
         </div>
 
         <div class="sidebar-bottom">
+            <button id="showUsersBtn" class="user-btn">
+                <span class="log-btn-icon">🔒</span>
+                <span class="log-btn-text">Edit Users</span>
+            </button>
             <button id="showLogsBtn" class="log-btn">
                 <span class="log-btn-icon">📋</span>
                 <span class="log-btn-text">Show Logs</span>
@@ -45,6 +49,18 @@
                 <h2 id="logPopupTitle"></h2>
                 <div id="logContent"></div>
                 <button class="close-btn-popup" onclick="closeLogPopup()">Close</button>
+            </div>
+        </div>
+        <div id="usersPopup" class="popup">
+            <div class="popup-content">
+                <h2>User Management</h2>
+                <div id="usersList"></div>
+                <div id="addUserForm">
+                    <input type="text" id="newUsername" placeholder="Username">
+                    <input type="password" id="newPassword" placeholder="Password">
+                    <button class="add-btn2" onclick="addUser()">+</button>
+                </div>
+                <button class="close-btn-popup" onclick="closeUsersPopup()">Close</button>
             </div>
         </div>
         <h2 id="communityName">Please create a Community</h2>
