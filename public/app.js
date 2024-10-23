@@ -249,8 +249,6 @@ async function removeUser(userId) {
     }
 }
 
-document.getElementById('showUsersBtn').addEventListener('click', showUsersPopup);
-
 /**
  * Fetches community data from the server and updates the UI.
  * @async
@@ -321,7 +319,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const showLogsBtn = document.getElementById('showUsersBtn');
     if (showLogsBtn) {
         showLogsBtn.addEventListener('click', function() {
-            showUsers()
+            showUsersPopup()
         });
     }
 });
