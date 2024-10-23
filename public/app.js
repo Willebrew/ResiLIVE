@@ -268,7 +268,7 @@ async function fetchData() {
             selectCommunity(communities[0].id);
         }
 
-        if (communities.length >= 9) {
+        if (communities.length >= 8) {
             const addButton = document.getElementById('12');
             if (addButton) {
                 addButton.remove();
@@ -305,6 +305,52 @@ async function logout() {
         console.error('Error logging out:', error);
     }
 }
+
+/**
+ * Changes the password for the currently logged-in user.
+ * Prompts the user for the current password, new password, and confirmation of the new password.
+ * Sends a POST request to the server to change the password.
+ * @returns {Promise<void>}
+ */
+async function changePassword() {
+    const currentPassword = prompt('Enter current password:');
+    const newPassword = prompt('Enter new password:');
+    const confirmPassword = prompt('Confirm new password:');
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        alert('All fields are required');
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        alert('New passwords do not match');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/change-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ currentPassword, newPassword }),
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            alert(data.message);
+        } else {
+            alert(data.error || 'Failed to change password');
+        }
+    } catch (error) {
+        console.error('Error changing password:', error);
+        alert('An error occurred while changing password');
+    }
+}
+
+document.getElementById('changePasswordBtn').addEventListener('click', changePassword);
 
 document.addEventListener('DOMContentLoaded', function() {
     const showLogsBtn = document.getElementById('showLogsBtn');
@@ -556,7 +602,7 @@ function renderCodes(address) {
  * @returns {Promise<void>}
  */
 async function addCommunity() {
-    if (communities.length >= 9) {
+    if (communities.length >= 8) {
         alert('Maximum number of communities reached');
         return;
     }
@@ -644,7 +690,7 @@ async function removeCommunity(communityId) {
  * @returns {void}
  */
 function updateAddCommunityButtonVisibility() {
-    const MAX_COMMUNITIES = 9;
+    const MAX_COMMUNITIES = 8;
     const sidebarTop = document.querySelector('.sidebar-top');
     let addButton = document.getElementById('12');
 

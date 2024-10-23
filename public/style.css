@@ -559,3 +559,19 @@ button:hover {
     display: flex;
     align-items: center;
 }
+
+.change-password-btn {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    background-color: #2ecc71;
+    color: white;
+    margin-top: 10px;
+}
+
+.change-password-btn:hover {
+    background-color: #27ae60;
+}

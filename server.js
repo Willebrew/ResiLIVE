@@ -33,7 +33,7 @@ app.use(session({
     secret: 'your-secret-key',
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: true } // SET TO FALSE FOR DEBUGGING
+    cookie: { secure: false } // SET TO FALSE FOR DEBUGGING
 }));
 
 // Apply CSRF protection to all other routes
@@ -220,8 +220,8 @@ app.post('/api/communities', requireAuth, requireAdmin, async (req, res) => {
         const jsonData = await readData(dataFile);
         if (!jsonData.communities) jsonData.communities = [];
 
-        if (jsonData.communities.length >= 9) {
-            return res.status(400).json({ error: 'Maximum number of communities (9) reached' });
+        if (jsonData.communities.length >= 8) {
+            return res.status(400).json({ error: 'Maximum number of communities (8) reached' });
         }
 
         const newCommunity = {
@@ -376,6 +376,24 @@ app.post('/api/admin/add-user', requireAuth, async (req, res) => {
         res.status(201).json({ message: 'User added successfully' });
     } catch (error) {
         errorHandler(res, error, 'Error adding user');
+    }
+});
+
+app.post('/api/change-password', requireAuth, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const users = await readData(usersFile);
+        const user = users.users.find(u => u.id === req.session.userId);
+
+        if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+            return res.status(401).json({ error: 'Current password is incorrect' });
+        }
+
+        user.password = await bcrypt.hash(newPassword, 10);
+        await writeData(usersFile, users);
+        res.json({ message: 'Password changed successfully' });
+    } catch (error) {
+        errorHandler(res, error, 'Error changing password');
     }
 });
 
