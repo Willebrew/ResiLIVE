@@ -25,7 +25,10 @@ app.set('trust proxy', 1);
 
 // Middleware setup
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static('public', {
+    index: false
+}));
+
 app.use(session({
     secret: 'your-secret-key',
     resave: false,
@@ -726,8 +729,11 @@ app.get('/api', limiter, (req, res) => {
 });
 
 // Route to serve the login page
-app.get('/', limiter, (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+app.get('/', (req, res) => {
+    if (!req.session.userId) {
+        return res.redirect('/login.html');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Route to serve the login page
@@ -736,7 +742,10 @@ app.get('/login.html', limiter, (req, res) => {
 });
 
 // Route to serve the index page
-app.get('/index.html', requireAuth, limiter, (req, res) => {
+app.get('/index.html', (req, res) => {
+    if (!req.session.userId) {
+        return res.redirect('/login.html');
+    }
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
