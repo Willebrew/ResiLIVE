@@ -808,7 +808,7 @@ app.get('/api', limiter, (req, res) => {
 });
 
 // Route to serve the login page
-app.get('/', (req, res) => {
+app.get('/', limiter, (req, res) => {
     if (!req.session.userId) {
         return res.redirect('/login.html');
     }
