@@ -24,8 +24,11 @@ ResiLIVE is a comprehensive community management system designed to streamline a
 1. Clone the repository
 2. Install dependencies: `npm install`
 3. Set up your environment variables (if any)
-4. Start the server: `node server.js`
-5. Access the web interface at `http://localhost:3000`
+4. Migrate to a database or use the existing structure for testing
+5. Start the server: `node server.js`
+6. Access the local web interface at `http://localhost:3000`
+7. A default superuser already exists (username: Superuser, password: root)
+8. Change the default superuser password
 
 ## API Endpoints
 
