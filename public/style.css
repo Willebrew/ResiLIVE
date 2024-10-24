@@ -472,13 +472,43 @@ button:hover {
     margin-bottom: 20px;
 }
 
+.user-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.role-btn {
+    background-color: #4a90e2;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease;
+}
+
+.role-btn.admin {
+    background-color: #f1c40f;
+}
+
+.role-btn:hover {
+    opacity: 0.8;
+}
+
 .user-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
     background-color: #3a3a3a;
     margin-bottom: 10px;
-    padding: 10px;
+    padding: 10px 15px;
     border-radius: 5px;
 }
 
