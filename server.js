@@ -512,7 +512,6 @@ app.put('/api/users/:id/role', requireAuth, requireAdmin, async (req, res) => {
                 await writeData(dataFile, jsonData);
             }
         }
-
         res.json({
             message: 'User role updated successfully',
             newRole: userToUpdate.role,

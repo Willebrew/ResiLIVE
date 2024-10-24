@@ -129,6 +129,10 @@ async function checkLoginStatus() {
     }
 }
 
+/**
+ * Event listener for the logout button click event.
+ * @event
+ */
 document.addEventListener('DOMContentLoaded', checkLoginStatus);
 
 /**
@@ -421,8 +425,10 @@ async function changePassword() {
     }
 }
 
+// Add event listener for the "Change Password" button
 document.getElementById('changePasswordBtn').addEventListener('click', changePassword);
 
+// Add event listener for the "Show Logs" button
 document.addEventListener('DOMContentLoaded', function() {
     const showLogsBtn = document.getElementById('showLogsBtn');
     if (showLogsBtn) {
@@ -432,6 +438,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// Add event listener for the "Show Users" button
 document.addEventListener('DOMContentLoaded', function() {
     const showLogsBtn = document.getElementById('showUsersBtn');
     if (showLogsBtn) {
@@ -441,6 +448,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// Add event listener for the "Add User" button
 document.addEventListener('DOMContentLoaded', function() {
     const addAddressBtn = document.getElementById('addAddressBtn');
     if (addAddressBtn) {
@@ -1127,7 +1135,6 @@ function removeSelectedUsers() {
     });
     updateAllowedUsers();
 }
-
 
 if (isAdmin) {
     const addCommunityBtn = document.querySelector('.sidebar .add-btn');
