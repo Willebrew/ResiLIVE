@@ -42,7 +42,7 @@ ResiLIVE is a comprehensive community management system designed to streamline a
 ## Security Features
 
 - Password hashing for user accounts
-- Role-based access control
+- Role-based access control management
 - Session-based authentication
 - Input validation and sanitization
 
