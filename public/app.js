@@ -296,17 +296,17 @@ async function removeUser(userId) {
                 fetchUsers();
                 alert('User removed successfully');
 
-                if (data.updatedCommunities) {
+                if (data.updatedCommunities && Array.isArray(data.updatedCommunities)) {
                     data.updatedCommunities.forEach(updatedCommunity => {
                         const communityIndex = communities.findIndex(c => c.id === updatedCommunity.id);
                         if (communityIndex !== -1) {
                             communities[communityIndex].allowedUsers = updatedCommunity.allowedUsers;
                         }
                     });
-                }
 
-                if (selectedCommunity && data.updatedCommunities.some(c => c.id === selectedCommunity.id)) {
-                    renderAllowedUsers();
+                    if (selectedCommunity && data.updatedCommunities.some(c => c.id === selectedCommunity.id)) {
+                        renderAllowedUsers();
+                    }
                 }
             } else {
                 const errorData = await response.json();
