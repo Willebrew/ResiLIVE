@@ -36,6 +36,18 @@ let users = [];
 let csrfToken;
 
 /**
+ * Variable to store the current user ID.
+ * @type {null}
+ */
+let currentUserId = null;
+
+/**
+ * Variable to store the current username.
+ * @type {null}
+ */
+let currentUsername = null;
+
+/**
  * Event listener for the DOMContentLoaded event to fetch the CSRF token when the document is fully loaded.
  * @event
  */
@@ -90,9 +102,11 @@ async function checkLoginStatus() {
         const response = await fetch('/api/check-auth');
         if (response.ok) {
             const data = await response.json();
+            currentUserId = data.userId;
+            currentUsername = data.username;
             updateUserName(data.username);
 
-            isAdmin = data.role === 'admin';
+            isAdmin = data.role === 'admin' || data.role === 'superuser';
 
             if (isAdmin) {
                 document.getElementById('allowedUsersManagement').style.display = 'block';
@@ -101,7 +115,7 @@ async function checkLoginStatus() {
                 const addCommunityBtn = document.getElementById('12');
                 const showUsersBtn = document.getElementById('showUsersBtn');
                 if (addCommunityBtn) addCommunityBtn.remove();
-                if (addCommunityBtn) showUsersBtn.remove();
+                if (showUsersBtn) showUsersBtn.remove();
             }
 
             fetchData();
@@ -111,7 +125,7 @@ async function checkLoginStatus() {
         }
     } catch (error) {
         console.error('Error checking login status:', error);
-        updateUserName('Guest');
+        updateUserName('Logged Out');
     }
 }
 
@@ -136,6 +150,56 @@ async function fetchUsers() {
 }
 
 /**
+ * Toggles a user's role between admin and user
+ * @async
+ * @param {string} userId - The ID of the user to toggle role
+ */
+async function toggleUserRole(userId) {
+    try {
+        const response = await fetch(`/api/users/${userId}/role`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const userIndex = users.findIndex(u => u.id === userId);
+
+            if (userIndex !== -1) {
+                users[userIndex].role = data.newRole;
+
+                // If user was made admin, remove them from all communities' allowed users lists
+                if (data.newRole === 'admin') {
+                    const username = users[userIndex].username;
+                    communities.forEach(community => {
+                        community.allowedUsers = community.allowedUsers.filter(
+                            allowedUser => allowedUser !== username
+                        );
+                    });
+
+                    // Update the UI for the currently selected community
+                    if (selectedCommunity) {
+                        renderAllowedUsers();
+                    }
+                }
+
+                renderUsers();
+            }
+        } else {
+            const errorData = await response.json();
+            alert(errorData.error || 'Failed to update user role');
+        }
+    } catch (error) {
+        console.error('Error toggling user role:', error);
+        alert('An error occurred while updating user role');
+    }
+}
+
+/**
  * Renders the list of users in the UI.
  * Filters users with the role 'user' and creates a user item for each.
  * Each user item includes the username and a button to remove the user.
@@ -146,12 +210,19 @@ function renderUsers() {
     const usersList = document.getElementById('usersList');
     usersList.innerHTML = '';
     users.forEach(user => {
-        if (user.role === 'user') {
+        if (user.id !== currentUserId && user.role !== 'superuser') {
             const userElement = document.createElement('div');
             userElement.className = 'user-item';
             userElement.innerHTML = `
                 <span>${user.username}</span>
-                <button onclick="removeUser('${user.id}')" class="remove-btn">-</button>
+                <div class="user-controls">
+                    <button onclick="toggleUserRole('${user.id}')" 
+                            class="role-btn ${user.role === 'admin' ? 'admin' : 'user'}" 
+                            title="${user.role === 'admin' ? 'Remove admin' : 'Make admin'}">
+                        ${user.role === 'admin' ? '👑' : '👤'}
+                    </button>
+                    <button onclick="removeUser('${user.id}')" class="remove-btn">-</button>
+                </div>
             `;
             usersList.appendChild(userElement);
         }

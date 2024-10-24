@@ -33,7 +33,7 @@ app.use(session({
     secret: 'your-secret-key',
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: true } // SET TO FALSE FOR DEBUGGING
+    cookie: { secure: false } // SET TO FALSE FOR DEBUGGING
 }));
 
 // Apply CSRF protection to all other routes
@@ -116,7 +116,7 @@ function requireAuth(req, res, next) {
  * @param {Function} next - The next middleware function.
  */
 function requireAdmin(req, res, next) {
-    if (req.session.userId && req.session.userRole === 'admin') {
+    if (req.session.userId && (req.session.userRole === 'admin' || req.session.userRole === 'superuser')) {
         next();
     } else {
         res.status(403).json({ error: 'Unauthorized. Admin access required.' });
@@ -266,7 +266,7 @@ app.get('/api/communities', requireAuth, async (req, res) => {
         const { communities } = await readData(dataFile);
         const visibleCommunities = communities.filter(community => {
 
-            if (req.session.userRole === 'admin') return true;
+            if (req.session.userRole === 'admin' || req.session.userRole === 'superuser') return true;
 
             return community.allowedUsers.includes(req.session.username);
         });
@@ -280,7 +280,12 @@ app.get('/api/communities', requireAuth, async (req, res) => {
 // Route to check if the user is authenticated
 app.get('/api/check-auth', (req, res) => {
     if (req.session.userId) {
-        res.json({ authenticated: true, username: req.session.username, role: req.session.userRole });
+        res.json({
+            authenticated: true,
+            userId: req.session.userId,
+            username: req.session.username,
+            role: req.session.userRole
+        });
     } else {
         res.status(401).json({ authenticated: false });
     }
@@ -327,24 +332,23 @@ app.delete('/api/users/:id', requireAuth, requireAdmin, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
+        if (userToRemove.role === 'superuser') {
+            return res.status(403).json({ error: 'Cannot remove superuser account' });
+        }
+
         users.users = users.users.filter(user => user.id !== req.params.id);
         await writeData(usersFile, users);
 
-        // Remove user from allowed users in all communities
         let jsonData = await readData(dataFile);
-        const updatedCommunities = [];
-
         jsonData.communities = jsonData.communities.map(community => {
             if (community.allowedUsers.includes(userToRemove.username)) {
                 community.allowedUsers = community.allowedUsers.filter(username => username !== userToRemove.username);
-                updatedCommunities.push({ id: community.id, allowedUsers: community.allowedUsers });
             }
             return community;
         });
 
         await writeData(dataFile, jsonData);
-
-        res.status(200).json({ message: 'User removed successfully', updatedCommunities });
+        res.json({ message: 'User removed successfully' });
     } catch (error) {
         errorHandler(res, error, 'Error removing user');
     }
@@ -437,7 +441,7 @@ app.put('/api/communities/:id/allowed-users', requireAuth, requireAdmin, async (
 
             for (const username of allowedUsers) {
                 const user = users.users.find(u => u.username === username);
-                if (user && user.role !== 'admin') {
+                if (user && user.role !== 'admin' && user.role !== 'superuser') {
                     validUsers.push(username);
                 } else {
                     invalidUsers.push(username);
@@ -447,18 +451,75 @@ app.put('/api/communities/:id/allowed-users', requireAuth, requireAdmin, async (
             community.allowedUsers = validUsers;
             await writeData(dataFile, jsonData);
 
-            let message = 'Allowed users updated successfully';
-            let warning = null;
             if (invalidUsers.length > 0) {
-                warning = `The following users were not added: ${invalidUsers.join(', ')}`;
+                res.status(400).json({
+                    error: `The following users were not added: ${invalidUsers.join(', ')}`,
+                    validUsers
+                });
+            } else {
+                res.status(200).json({
+                    message: 'Allowed users updated successfully',
+                    validUsers
+                });
             }
-
-            res.status(200).json({ message, warning, validUsers });
         } else {
             res.status(404).json({ error: 'Community not found' });
         }
     } catch (error) {
         errorHandler(res, error, 'Error updating allowed users');
+    }
+});
+
+// Route to toggle user role (admin only)
+app.put('/api/users/:id/role', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const targetUserId = req.params.id;
+        if (targetUserId === req.session.userId) {
+            return res.status(403).json({ error: 'Cannot modify your own role' });
+        }
+
+        let users = await readData(usersFile);
+        const userToUpdate = users.users.find(user => user.id === targetUserId);
+
+        if (!userToUpdate) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (userToUpdate.role === 'superuser') {
+            return res.status(403).json({ error: 'Cannot modify superuser role' });
+        }
+
+        const newRole = userToUpdate.role === 'admin' ? 'user' : 'admin';
+        userToUpdate.role = newRole;
+        await writeData(usersFile, users);
+
+        // If the user is being made an admin, remove them from all community allowed users lists
+        if (newRole === 'admin') {
+            let jsonData = await readData(dataFile);
+            let communitiesUpdated = false;
+
+            jsonData.communities = jsonData.communities.map(community => {
+                if (community.allowedUsers.includes(userToUpdate.username)) {
+                    communitiesUpdated = true;
+                    community.allowedUsers = community.allowedUsers.filter(username =>
+                        username !== userToUpdate.username
+                    );
+                }
+                return community;
+            });
+
+            if (communitiesUpdated) {
+                await writeData(dataFile, jsonData);
+            }
+        }
+
+        res.json({
+            message: 'User role updated successfully',
+            newRole: userToUpdate.role,
+            username: userToUpdate.username
+        });
+    } catch (error) {
+        errorHandler(res, error, 'Error updating user role');
     }
 });
 
