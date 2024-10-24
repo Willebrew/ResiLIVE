@@ -821,7 +821,7 @@ app.get('/login.html', limiter, (req, res) => {
 });
 
 // Route to serve the index page
-app.get('/index.html', (req, res) => {
+app.get('/index.html', limiter, (req, res) => {
     if (!req.session.userId) {
         return res.redirect('/login.html');
     }
