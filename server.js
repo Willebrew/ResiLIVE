@@ -133,7 +133,7 @@ app.post('/api/register', requireAuth, requireAdmin, async (req, res) => {
             users.users = [];
         }
 
-        if (users.users.find(u => u.username === username)) {
+        if (users.users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
             return res.status(400).json({ error: 'Username already exists' });
         }
 
@@ -188,7 +188,7 @@ app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
         const users = await readData(usersFile);
-        const user = users.users.find(u => u.username === username);
+        const user = users.users.find(u => u.username.toLowerCase() === username.toLowerCase());
 
         if (user && await bcrypt.compare(password, user.password)) {
             req.session.userId = user.id;
