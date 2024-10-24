@@ -33,7 +33,7 @@ app.use(session({
     secret: 'your-secret-key',
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false } // SET TO FALSE FOR DEBUGGING
+    cookie: { secure: true } // SET TO FALSE FOR DEBUGGING
 }));
 
 // Apply CSRF protection to all other routes
