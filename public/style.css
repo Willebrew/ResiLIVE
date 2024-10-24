@@ -517,12 +517,28 @@ button:hover {
 }
 
 .user-item button {
-    background-color: #ff4136;
-    color: white;
     border: none;
     padding: 5px 10px;
     border-radius: 50px;
     cursor: pointer;
+}
+
+.user-item .role-btn {
+    background-color: #595959;
+    color: white;
+}
+
+.user-item .remove-btn {
+    background-color: #ff4444;
+    color: white;
+}
+
+.user-item .role-btn:hover {
+    background-color: #404040;
+}
+
+.user-item .remove-btn:hover {
+    background-color: #ff0000;
 }
 
 #addUserForm {
