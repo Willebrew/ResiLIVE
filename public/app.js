@@ -1080,7 +1080,6 @@ async function updateAllowedUsers() {
 
         if (response.ok) {
             const data = await response.json();
-            alert(data.message);
             if (data.warning) {
                 alert(data.warning);
             }

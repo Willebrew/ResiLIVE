@@ -319,9 +319,6 @@ app.post('/api/communities', requireAuth, requireAdmin, async (req, res) => {
             ...createdDoc.data()
         };
 
-        // Log the action
-        await logAccess(communityData.name, req.session.username, 'created community');
-
         // Return the complete community data
         res.status(201).json({
             message: 'Community added successfully',
@@ -337,20 +334,35 @@ app.post('/api/communities', requireAuth, requireAdmin, async (req, res) => {
 app.delete('/api/communities/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
         const communityRef = db.collection('communities').doc(req.params.id);
-        const doc = await communityRef.get();
+        const communityDoc = await communityRef.get();
 
-        if (!doc.exists) {
+        if (!communityDoc.exists) {
             return res.status(404).json({ error: 'Community not found' });
         }
 
+        const communityData = communityDoc.data();
+        const communityName = communityData.name;
+
+        // Start a batch write
+        const batch = db.batch();
+
         // Delete the community
-        await communityRef.delete();
+        batch.delete(communityRef);
 
-        // Log the action
-        const communityData = doc.data();
-        await logAccess(communityData.name, req.session.username, 'deleted community');
+        // Get all access logs for this community
+        const logsSnapshot = await db.collection('access_logs')
+            .where('community', '==', communityName)
+            .get();
 
-        res.status(200).json({ message: 'Community deleted successfully' });
+        // Add all log deletions to the batch
+        logsSnapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        // Commit the batch (deletes community and all its logs atomically)
+        await batch.commit();
+
+        res.status(200).json({ message: 'Community and associated logs deleted successfully' });
     } catch (error) {
         console.error('Error deleting community:', error);
         res.status(500).json({ error: 'Error deleting community' });
@@ -570,11 +582,18 @@ app.put('/api/communities/:id/allowed-users', requireAuth, requireAdmin, async (
         const validUsers = [];
         const invalidUsers = [];
 
+        // Convert allowedUsers to lowercase for comparison
+        const normalizedAllowedUsers = allowedUsers.map(username => username.toLowerCase());
+
         // Validate each user
-        for (const username of allowedUsers) {
-            const user = users.find(u => u.username === username);
+        for (const username of normalizedAllowedUsers) {
+            // Find user case-insensitively but keep original case in database
+            const user = users.find(u => u.username.toLowerCase() === username);
             if (user && user.role !== 'admin' && user.role !== 'superuser') {
-                validUsers.push(username);
+                // Add the original username case from the database
+                if (!validUsers.includes(user.username)) {
+                    validUsers.push(user.username);
+                }
             } else {
                 invalidUsers.push(username);
             }
@@ -588,7 +607,6 @@ app.put('/api/communities/:id/allowed-users', requireAuth, requireAdmin, async (
 
         if (invalidUsers.length > 0) {
             res.status(200).json({
-                message: 'Allowed users partially updated',
                 warning: `The following users were not added: ${invalidUsers.join(', ')}`,
                 validUsers
             });
