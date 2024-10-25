@@ -4,8 +4,7 @@
  */
 require('dotenv').config();
 const express = require('express');
-const session = require('express-session');
-const FirestoreSessionStore = require('./FirestoreSessionStore');
+const cookieSession = require('cookie-session');
 const admin = require('firebase-admin');
 const bcrypt = require('bcrypt');
 const path = require('path');
@@ -50,14 +49,14 @@ app.use(express.static('public', {
     index: false
 }));
 
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
+// Add cookie-session configuration
+app.use(cookieSession({
+    name: 'session',
+    keys: [process.env.SESSION_SECRET || 'your-secret-key'],
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax'
 }));
 
 app.use(cors({
@@ -270,47 +269,33 @@ async function removeCommunityFromAccessLogs(communityName) {
 app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
-
-        // Query Firestore for the user
         const usersRef = db.collection('users');
         const snapshot = await usersRef.where('username', '==', username.toLowerCase()).get();
 
         if (snapshot.empty) {
-            console.log('User not found:', username);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
         const userDoc = snapshot.docs[0];
         const userData = userDoc.data();
-
-        // Compare password
         const isValidPassword = await bcrypt.compare(password, userData.password);
 
         if (!isValidPassword) {
-            console.log('Invalid password for user:', username);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        // Set session data
+        // Set session data directly
         req.session.userId = userDoc.id;
         req.session.username = userData.username;
         req.session.userRole = userData.role;
 
-        // Save session
-        req.session.save((err) => {
-            if (err) {
-                console.error('Session save error:', err);
-                return res.status(500).json({ error: 'Error creating session' });
+        res.json({
+            message: 'Logged in successfully',
+            user: {
+                username: userData.username,
+                role: userData.role
             }
-            res.json({
-                message: 'Logged in successfully',
-                user: {
-                    username: userData.username,
-                    role: userData.role
-                }
-            });
         });
-
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ error: 'Error during login' });
@@ -319,13 +304,8 @@ app.post('/api/login', async (req, res) => {
 
 // Route to log out a user
 app.post('/api/logout', (req, res) => {
-    req.session.destroy(err => {
-        if (err) {
-            errorHandler(res, err, 'Error logging out');
-        } else {
-            res.json({ message: 'Logged out successfully' });
-        }
-    });
+    req.session = null;
+    res.json({ message: 'Logged out successfully' });
 });
 
 // Route to add a new community
