@@ -339,8 +339,18 @@ async function fetchData() {
         }
         communities = await response.json();
         renderCommunities();
+
+        const addAddressBtn = document.getElementById('addAddressBtn');
+        const addressesHeader = document.querySelector('main h3');
+
         if (communities.length > 0) {
+            addAddressBtn.style.display = 'block';
+            addressesHeader.style.display = 'block';
             selectCommunity(communities[0].id);
+        } else {
+            addAddressBtn.style.display = 'none';
+            addressesHeader.style.display = 'none';
+            document.getElementById('communityName').textContent = 'Please create a Community';
         }
 
         if (communities.length >= 8) {
@@ -715,6 +725,13 @@ async function addCommunity() {
                 renderCommunities();
                 selectCommunity(data.community.id);
                 updateAddCommunityButtonVisibility();
+
+                const addAddressBtn = document.getElementById('addAddressBtn');
+                const addressesHeader = document.querySelector('main h3');
+                if (communities.length > 0) {
+                    addAddressBtn.style.display = 'block';
+                    addressesHeader.style.display = 'block';
+                }
             } else {
                 throw new Error('Invalid server response');
             }
@@ -747,11 +764,20 @@ async function removeCommunity(communityId) {
             if (response.ok) {
                 communities = communities.filter(c => c.id !== communityId);
                 renderCommunities();
+
+                const addAddressBtn = document.getElementById('addAddressBtn');
+                const addressesHeader = document.querySelector('main h3');
+
                 if (communities.length > 0) {
                     selectCommunity(communities[0].id);
+                    addAddressBtn.style.display = 'block';
+                    addressesHeader.style.display = 'block';
                 } else {
                     selectedCommunity = null;
                     renderAddresses();
+                    addAddressBtn.style.display = 'none';
+                    addressesHeader.style.display = 'none';
+                    document.getElementById('communityName').textContent = 'Please create a Community';
                 }
                 updateAddCommunityButtonVisibility();
             } else {
