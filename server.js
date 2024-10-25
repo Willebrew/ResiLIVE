@@ -4,7 +4,7 @@
  */
 require('dotenv').config();
 const express = require('express');
-const session = require('express-session');
+const session = require('cookie-session');
 const FirestoreSessionStore = require('./FirestoreSessionStore');
 const admin = require('firebase-admin');
 const bcrypt = require('bcrypt');
