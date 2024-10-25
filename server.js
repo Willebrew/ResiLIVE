@@ -74,11 +74,6 @@ app.get('/csrf-token', (req, res) => {
     res.json({ csrfToken: req.csrfToken() });
 });
 
-// Route to serve the main API data file
-app.get('/api', limiter, (req, res) => {
-    res.sendFile(path.join(__dirname, 'data.json'));
-});
-
 /**
  * Reads data from a specified file.
  * @param {string} collection - The path to the file.
@@ -1033,8 +1028,19 @@ async function removeExpiredCodes() {
 setInterval(removeExpiredCodes, 60000);
 
 // Route to serve the main API data file
-app.get('/api', limiter, (req, res) => {
-    res.sendFile(path.join(__dirname, 'data.json'));
+app.get('/api', limiter, async (req, res) => {
+    try {
+        const snapshot = await db.collection('communities').get();
+        const communities = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        res.json({ communities });
+    } catch (error) {
+        console.error('Error fetching communities:', error);
+        res.status(500).json({ error: 'Error fetching data' });
+    }
 });
 
 // Route to serve the login page
