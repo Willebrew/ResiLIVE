@@ -69,11 +69,10 @@ ResiLIVE is a comprehensive community management system designed to streamline a
     - Create a Firebase project
     - Set up Firestore Database (Rules below)
     - Add Firebase credentials to .env file (Example below)
-4. If debugging locally, make sure to set `secure: false`
-5. **For first time use**, uncomment createInitialSuperuser(), run `node server.js`, then close the server and comment out the function
-6. Start the server: `node server.js`
-7. Access the web interface at `http://localhost:3000`
-8. Default superuser credentials:
+4. **For first time use**, uncomment createInitialSuperuser(), run `node server.js`, then close the server and comment out the function
+5. Start the server: `node server.js`
+6. Access the web interface at `http://localhost:3000`
+7. Default superuser credentials:
     - Username: superuser
     - Password: root (change immediately)
 
