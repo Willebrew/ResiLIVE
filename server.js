@@ -2,18 +2,37 @@
  * @file server.js
  * @description This file contains the main server code for the application, including routes, middleware, and utility functions.
  */
-
+require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
+const admin = require('firebase-admin');
 const bcrypt = require('bcrypt');
 const path = require('path');
-const fs = require('fs').promises;
 const RateLimit = require('express-rate-limit');
 const lusca = require('lusca');
-const accessLogsFile = path.join(__dirname, 'access_logs.json');
 const app = express();
 const port = 3000;
+const cors = require('cors');
 const lastAccessTimes = {};
+
+// Initialize Firebase
+admin.initializeApp({
+    credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL
+    })
+});
+
+// Create the Firestore instance
+const db = admin.firestore();
+
+// Initialize collections after the database is created
+const collections = {
+    users: db.collection('users'),
+    communities: db.collection('communities'),
+    accessLogs: db.collection('access_logs')
+};
 
 // Rate limiter setup: maximum of 100 requests per 15 minutes
 const limiter = RateLimit({
@@ -36,6 +55,11 @@ app.use(session({
     cookie: { secure: true } // SET TO FALSE FOR DEBUGGING
 }));
 
+app.use(cors({
+    origin: 'http://localhost:3000',
+    credentials: true
+}));
+
 // Apply CSRF protection to all other routes
 app.use((req, res, next) => {
     if (req.path !== '/api/log-access') {
@@ -55,33 +79,52 @@ app.get('/api', limiter, (req, res) => {
     res.sendFile(path.join(__dirname, 'data.json'));
 });
 
-const dataFile = path.join(__dirname, 'data.json');
-const usersFile = path.join(__dirname, 'users.json');
-
 /**
  * Reads data from a specified file.
- * @param {string} file - The path to the file.
+ * @param {string} collection - The path to the file.
  * @returns {Promise<Object>} The parsed JSON data from the file.
  */
-async function readData(file) {
+async function readData(collection) {
     try {
-        const data = await fs.readFile(file, 'utf8');
-        return JSON.parse(data);
+        const snapshot = await collections[collection].get();
+        const data = {};
+        data[collection] = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        return data;
     } catch (error) {
-        if (error.code === 'ENOENT') {
-            return { communities: [] };
-        }
-        throw error;
+        console.error(`Error reading ${collection}:`, error);
+        return { [collection]: [] };
     }
 }
 
 /**
  * Writes data to a specified file.
- * @param {string} file - The path to the file.
+ * @param {string} collection - The path to the file.
  * @param {Object} data - The data to write to the file.
  */
-async function writeData(file, data) {
-    await fs.writeFile(file, JSON.stringify(data, null, 2));
+async function writeData(collection, data) {
+    try {
+        const batch = db.batch();
+
+        // Delete existing data
+        const existingDocs = await collections[collection].get();
+        existingDocs.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        // Add new data
+        data[collection].forEach(item => {
+            const docRef = collections[collection].doc(item.id);
+            batch.set(docRef, item);
+        });
+
+        await batch.commit();
+    } catch (error) {
+        console.error(`Error writing to ${collection}:`, error);
+        throw error;
+    }
 }
 
 /**
@@ -127,21 +170,25 @@ function requireAdmin(req, res, next) {
 app.post('/api/register', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { username, password } = req.body;
-        let users = await readData(usersFile);
+        const usersRef = db.collection('users');
 
-        if (!users.users) {
-            users.users = [];
-        }
+        const existingUser = await usersRef
+            .where('username', '==', username.toLowerCase())
+            .get();
 
-        if (users.users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
+        if (!existingUser.empty) {
             return res.status(400).json({ error: 'Username already exists' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = { id: Date.now().toString(), username, password: hashedPassword, role: 'user' };
-        users.users.push(newUser);
-        await writeData(usersFile, users);
+        const newUser = {
+            id: Date.now().toString(),
+            username,
+            password: hashedPassword,
+            role: 'user'
+        };
 
+        await usersRef.doc(newUser.id).set(newUser);
         res.status(201).json({ message: 'User registered successfully' });
     } catch (error) {
         errorHandler(res, error, 'Error registering user');
@@ -154,13 +201,13 @@ app.post('/api/register', requireAuth, requireAdmin, async (req, res) => {
  */
 async function addCommunityToAccessLogs(communityName) {
     try {
-        let logs = await readData(accessLogsFile);
+        let logs = await readData('access_logs');
         if (!logs.communities) {
             logs.communities = [];
         }
         if (!logs.communities.some(c => c.name === communityName)) {
             logs.communities.push({ name: communityName, logs: [] });
-            await writeData(accessLogsFile, logs);
+            await writeData('access_logs', logs);
         }
     } catch (error) {
         console.error('Error adding community to access logs:', error);
@@ -173,10 +220,10 @@ async function addCommunityToAccessLogs(communityName) {
  */
 async function removeCommunityFromAccessLogs(communityName) {
     try {
-        let logs = await readData(accessLogsFile);
+        let logs = await readData('access_logs');
         if (logs.communities) {
             logs.communities = logs.communities.filter(c => c.name !== communityName);
-            await writeData(accessLogsFile, logs);
+            await writeData('access_logs', logs);
         }
     } catch (error) {
         console.error('Error removing community from access logs:', error);
@@ -187,19 +234,50 @@ async function removeCommunityFromAccessLogs(communityName) {
 app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
-        const users = await readData(usersFile);
-        const user = users.users.find(u => u.username.toLowerCase() === username.toLowerCase());
 
-        if (user && await bcrypt.compare(password, user.password)) {
-            req.session.userId = user.id;
-            req.session.username = user.username;
-            req.session.userRole = user.role;
-            res.json({ message: 'Logged in successfully' });
-        } else {
-            res.status(401).json({ error: 'Invalid credentials' });
+        // Query Firestore for the user
+        const usersRef = db.collection('users');
+        const snapshot = await usersRef.where('username', '==', username.toLowerCase()).get();
+
+        if (snapshot.empty) {
+            console.log('User not found:', username);
+            return res.status(401).json({ error: 'Invalid credentials' });
         }
+
+        const userDoc = snapshot.docs[0];
+        const userData = userDoc.data();
+
+        // Compare password
+        const isValidPassword = await bcrypt.compare(password, userData.password);
+
+        if (!isValidPassword) {
+            console.log('Invalid password for user:', username);
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        // Set session data
+        req.session.userId = userDoc.id;
+        req.session.username = userData.username;
+        req.session.userRole = userData.role;
+
+        // Save session
+        req.session.save((err) => {
+            if (err) {
+                console.error('Session save error:', err);
+                return res.status(500).json({ error: 'Error creating session' });
+            }
+            res.json({
+                message: 'Logged in successfully',
+                user: {
+                    username: userData.username,
+                    role: userData.role
+                }
+            });
+        });
+
     } catch (error) {
-        errorHandler(res, error, 'Error logging in');
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Error during login' });
     }
 });
 
@@ -217,63 +295,89 @@ app.post('/api/logout', (req, res) => {
 // Route to add a new community
 app.post('/api/communities', requireAuth, requireAdmin, async (req, res) => {
     try {
-        const jsonData = await readData(dataFile);
-        if (!jsonData.communities) jsonData.communities = [];
-
-        if (jsonData.communities.length >= 8) {
+        // Get all communities to check count
+        const snapshot = await db.collection('communities').get();
+        if (snapshot.size >= 8) {
             return res.status(400).json({ error: 'Maximum number of communities (8) reached' });
         }
 
+        // Create new community
         const newCommunity = {
-            id: Date.now().toString(),
             name: req.body.name,
             addresses: [],
-            allowedUsers: req.body.allowedUsers || []
+            allowedUsers: req.body.allowedUsers || [],
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
         };
 
-        jsonData.communities.push(newCommunity);
-        await writeData(dataFile, jsonData);
+        // Add to Firestore and get the reference
+        const docRef = await db.collection('communities').add(newCommunity);
 
-        await addCommunityToAccessLogs(newCommunity.name);
+        // Get the created document
+        const createdDoc = await docRef.get();
+        const communityData = {
+            id: docRef.id,
+            ...createdDoc.data()
+        };
 
-        res.status(201).json(newCommunity);
+        // Log the action
+        await logAccess(communityData.name, req.session.username, 'created community');
+
+        // Return the complete community data
+        res.status(201).json({
+            message: 'Community added successfully',
+            community: communityData
+        });
     } catch (error) {
-        errorHandler(res, error, 'Error adding community');
+        console.error('Error adding community:', error);
+        res.status(500).json({ error: 'Error adding community' });
     }
 });
 
 // Route to delete a community
 app.delete('/api/communities/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
-        let jsonData = await readData(dataFile);
-        const communityToRemove = jsonData.communities.find(community => community.id === req.params.id);
-        if (communityToRemove) {
-            jsonData.communities = jsonData.communities.filter(community => community.id !== req.params.id);
-            await writeData(dataFile, jsonData);
-            await removeCommunityFromAccessLogs(communityToRemove.name);
-            res.sendStatus(204);
-        } else {
-            res.status(404).json({ error: 'Community not found' });
+        const communityRef = db.collection('communities').doc(req.params.id);
+        const doc = await communityRef.get();
+
+        if (!doc.exists) {
+            return res.status(404).json({ error: 'Community not found' });
         }
+
+        // Delete the community
+        await communityRef.delete();
+
+        // Log the action
+        const communityData = doc.data();
+        await logAccess(communityData.name, req.session.username, 'deleted community');
+
+        res.status(200).json({ message: 'Community deleted successfully' });
     } catch (error) {
-        errorHandler(res, error, 'Error removing community');
+        console.error('Error deleting community:', error);
+        res.status(500).json({ error: 'Error deleting community' });
     }
 });
 
 // Route to get all communities visible to the authenticated user
 app.get('/api/communities', requireAuth, async (req, res) => {
     try {
-        const { communities } = await readData(dataFile);
+        const snapshot = await db.collection('communities').get();
+        const communities = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        // Filter communities based on user role
         const visibleCommunities = communities.filter(community => {
-
-            if (req.session.userRole === 'admin' || req.session.userRole === 'superuser') return true;
-
+            if (req.session.userRole === 'admin' || req.session.userRole === 'superuser') {
+                return true;
+            }
             return community.allowedUsers.includes(req.session.username);
         });
 
-        res.json(visibleCommunities || []);
+        res.json(visibleCommunities);
     } catch (error) {
-        errorHandler(res, error, 'Error reading communities');
+        console.error('Error fetching communities:', error);
+        res.status(500).json({ error: 'Error fetching communities' });
     }
 });
 
@@ -294,8 +398,13 @@ app.get('/api/check-auth', (req, res) => {
 // Get all users (admin only)
 app.get('/api/users', requireAuth, requireAdmin, async (req, res) => {
     try {
-        const users = await readData(usersFile);
-        res.json(users.users);
+        const snapshot = await db.collection('users').get();
+        const users = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            password: undefined
+        }));
+        res.json(users);
     } catch (error) {
         errorHandler(res, error, 'Error fetching users');
     }
@@ -305,18 +414,25 @@ app.get('/api/users', requireAuth, requireAdmin, async (req, res) => {
 app.post('/api/users', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { username, password } = req.body;
-        let users = await readData(usersFile);
 
-        if (users.users.find(u => u.username === username)) {
+        const existingUser = await db.collection('users')
+            .where('username', '==', username.toLowerCase())
+            .get();
+
+        if (!existingUser.empty) {
             return res.status(400).json({ error: 'Username already exists' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = { id: Date.now().toString(), username, password: hashedPassword, role: 'user' };
-        users.users.push(newUser);
-        await writeData(usersFile, users);
+        const newUser = {
+            username: username.toLowerCase(),
+            password: hashedPassword,
+            role: 'user',
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        };
 
-        res.status(201).json({ message: 'User added successfully' });
+        const docRef = await db.collection('users').add(newUser);
+        res.status(201).json({ message: 'User added successfully', id: docRef.id });
     } catch (error) {
         errorHandler(res, error, 'Error adding user');
     }
@@ -325,32 +441,54 @@ app.post('/api/users', requireAuth, requireAdmin, async (req, res) => {
 // Remove a user (admin only)
 app.delete('/api/users/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
-        let users = await readData(usersFile);
-        const userToRemove = users.users.find(user => user.id === req.params.id);
+        const userRef = db.collection('users').doc(req.params.id);
+        const userDoc = await userRef.get();
 
-        if (!userToRemove) {
+        if (!userDoc.exists) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        if (userToRemove.role === 'superuser') {
+        const userData = userDoc.data();
+
+        // Prevent removal of superuser
+        if (userData.role === 'superuser') {
             return res.status(403).json({ error: 'Cannot remove superuser account' });
         }
 
-        users.users = users.users.filter(user => user.id !== req.params.id);
-        await writeData(usersFile, users);
+        // Remove user from all communities' allowedUsers arrays
+        const communitiesSnapshot = await db.collection('communities').get();
+        const batch = db.batch();
 
-        let jsonData = await readData(dataFile);
-        jsonData.communities = jsonData.communities.map(community => {
-            if (community.allowedUsers.includes(userToRemove.username)) {
-                community.allowedUsers = community.allowedUsers.filter(username => username !== userToRemove.username);
+        communitiesSnapshot.docs.forEach(doc => {
+            const community = doc.data();
+            if (community.allowedUsers && community.allowedUsers.includes(userData.username)) {
+                const updatedAllowedUsers = community.allowedUsers.filter(
+                    username => username !== userData.username
+                );
+                batch.update(doc.ref, { allowedUsers: updatedAllowedUsers });
             }
-            return community;
         });
 
-        await writeData(dataFile, jsonData);
-        res.json({ message: 'User removed successfully' });
+        // Delete the user
+        batch.delete(userRef);
+
+        // Commit all changes
+        await batch.commit();
+
+        res.json({
+            message: 'User removed successfully',
+            updatedCommunities: communitiesSnapshot.docs
+                .map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }))
+                .filter(community => community.allowedUsers &&
+                    community.allowedUsers.includes(userData.username))
+        });
+
     } catch (error) {
-        errorHandler(res, error, 'Error removing user');
+        console.error('Error removing user:', error);
+        res.status(500).json({ error: 'Error removing user' });
     }
 });
 
@@ -362,7 +500,7 @@ app.post('/api/admin/add-user', requireAuth, async (req, res) => {
         }
 
         const { username, password } = req.body;
-        let users = await readData(usersFile);
+        let users = await readData('users');
 
         if (!users.users) {
             users.users = [];
@@ -375,7 +513,7 @@ app.post('/api/admin/add-user', requireAuth, async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = { id: Date.now().toString(), username, password: hashedPassword };
         users.users.push(newUser);
-        await writeData(usersFile, users);
+        await writeData('users', users);
 
         res.status(201).json({ message: 'User added successfully' });
     } catch (error) {
@@ -386,7 +524,7 @@ app.post('/api/admin/add-user', requireAuth, async (req, res) => {
 app.post('/api/change-password', requireAuth, async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
-        const users = await readData(usersFile);
+        const users = await readData('users');
         const user = users.users.find(u => u.id === req.session.userId);
 
         if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
@@ -394,33 +532,17 @@ app.post('/api/change-password', requireAuth, async (req, res) => {
         }
 
         user.password = await bcrypt.hash(newPassword, 10);
-        await writeData(usersFile, users);
+        await writeData('users', users);
         res.json({ message: 'Password changed successfully' });
     } catch (error) {
         errorHandler(res, error, 'Error changing password');
     }
 });
 
-// Route to add a new community (duplicate, should be removed)
-app.post('/api/communities', requireAuth, requireAdmin, async (req, res) => {
-    try {
-        const jsonData = await readData(dataFile);
-        if (!jsonData.communities) jsonData.communities = [];
-        const newCommunity = { id: Date.now().toString(), name: req.body.name, addresses: [], allowedUsers: [] };
-        jsonData.communities.push(newCommunity);
-        await writeData(dataFile, jsonData);
-        res.status(201).json(newCommunity);
-    } catch (error) {
-        errorHandler(res, error, 'Error adding community');
-    }
-});
-
 // Route to delete a community (duplicate, should be removed)
 app.delete('/api/communities/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
-        let jsonData = await readData(dataFile);
-        jsonData.communities = jsonData.communities.filter(community => community.id !== req.params.id);
-        await writeData(dataFile, jsonData);
+        await db.collection('communities').doc(req.params.id).delete();
         res.sendStatus(204);
     } catch (error) {
         errorHandler(res, error, 'Error removing community');
@@ -431,42 +553,54 @@ app.delete('/api/communities/:id', requireAuth, requireAdmin, async (req, res) =
 app.put('/api/communities/:id/allowed-users', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { allowedUsers } = req.body;
-        let jsonData = await readData(dataFile);
-        let users = await readData(usersFile);
-        const community = jsonData.communities.find(c => c.id === req.params.id);
+        const communityRef = db.collection('communities').doc(req.params.id);
+        const communityDoc = await communityRef.get();
 
-        if (community) {
-            const validUsers = [];
-            const invalidUsers = [];
+        if (!communityDoc.exists) {
+            return res.status(404).json({ error: 'Community not found' });
+        }
 
-            for (const username of allowedUsers) {
-                const user = users.users.find(u => u.username === username);
-                if (user && user.role !== 'admin' && user.role !== 'superuser') {
-                    validUsers.push(username);
-                } else {
-                    invalidUsers.push(username);
-                }
-            }
+        // Get all users to validate against
+        const usersSnapshot = await db.collection('users').get();
+        const users = usersSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
 
-            community.allowedUsers = validUsers;
-            await writeData(dataFile, jsonData);
+        const validUsers = [];
+        const invalidUsers = [];
 
-            if (invalidUsers.length > 0) {
-                res.status(400).json({
-                    error: `The following users were not added: ${invalidUsers.join(', ')}`,
-                    validUsers
-                });
+        // Validate each user
+        for (const username of allowedUsers) {
+            const user = users.find(u => u.username === username);
+            if (user && user.role !== 'admin' && user.role !== 'superuser') {
+                validUsers.push(username);
             } else {
-                res.status(200).json({
-                    message: 'Allowed users updated successfully',
-                    validUsers
-                });
+                invalidUsers.push(username);
             }
+        }
+
+        // Update the community with valid users
+        await communityRef.update({
+            allowedUsers: validUsers,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        if (invalidUsers.length > 0) {
+            res.status(200).json({
+                message: 'Allowed users partially updated',
+                warning: `The following users were not added: ${invalidUsers.join(', ')}`,
+                validUsers
+            });
         } else {
-            res.status(404).json({ error: 'Community not found' });
+            res.status(200).json({
+                message: 'Allowed users updated successfully',
+                validUsers
+            });
         }
     } catch (error) {
-        errorHandler(res, error, 'Error updating allowed users');
+        console.error('Error updating allowed users:', error);
+        res.status(500).json({ error: 'Error updating allowed users' });
     }
 });
 
@@ -474,51 +608,59 @@ app.put('/api/communities/:id/allowed-users', requireAuth, requireAdmin, async (
 app.put('/api/users/:id/role', requireAuth, requireAdmin, async (req, res) => {
     try {
         const targetUserId = req.params.id;
+
+        // Prevent self-modification
         if (targetUserId === req.session.userId) {
             return res.status(403).json({ error: 'Cannot modify your own role' });
         }
 
-        let users = await readData(usersFile);
-        const userToUpdate = users.users.find(user => user.id === targetUserId);
+        // Get user document reference
+        const userRef = db.collection('users').doc(targetUserId);
+        const userDoc = await userRef.get();
 
-        if (!userToUpdate) {
+        if (!userDoc.exists) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        if (userToUpdate.role === 'superuser') {
+        const userData = userDoc.data();
+
+        // Prevent modifying superuser
+        if (userData.role === 'superuser') {
             return res.status(403).json({ error: 'Cannot modify superuser role' });
         }
 
-        const newRole = userToUpdate.role === 'admin' ? 'user' : 'admin';
-        userToUpdate.role = newRole;
-        await writeData(usersFile, users);
+        // Toggle role
+        const newRole = userData.role === 'admin' ? 'user' : 'admin';
 
-        // If the user is being made an admin, remove them from all community allowed users lists
+        // Update user role
+        await userRef.update({ role: newRole });
+
+        // If user is being made admin, remove them from all communities' allowed users
         if (newRole === 'admin') {
-            let jsonData = await readData(dataFile);
-            let communitiesUpdated = false;
+            const communitiesSnapshot = await db.collection('communities').get();
+            const batch = db.batch();
 
-            jsonData.communities = jsonData.communities.map(community => {
-                if (community.allowedUsers.includes(userToUpdate.username)) {
-                    communitiesUpdated = true;
-                    community.allowedUsers = community.allowedUsers.filter(username =>
-                        username !== userToUpdate.username
+            communitiesSnapshot.docs.forEach(doc => {
+                const community = doc.data();
+                if (community.allowedUsers && community.allowedUsers.includes(userData.username)) {
+                    const updatedAllowedUsers = community.allowedUsers.filter(
+                        username => username !== userData.username
                     );
+                    batch.update(doc.ref, { allowedUsers: updatedAllowedUsers });
                 }
-                return community;
             });
 
-            if (communitiesUpdated) {
-                await writeData(dataFile, jsonData);
-            }
+            await batch.commit();
         }
+
         res.json({
             message: 'User role updated successfully',
-            newRole: userToUpdate.role,
-            username: userToUpdate.username
+            newRole: newRole,
+            username: userData.username
         });
     } catch (error) {
-        errorHandler(res, error, 'Error updating user role');
+        console.error('Error updating user role:', error);
+        res.status(500).json({ error: 'Error updating user role' });
     }
 });
 
@@ -540,35 +682,68 @@ app.get('/api/communities/:id/addresses', requireAuth, async (req, res) => {
 // Route to add an address to a community
 app.post('/api/communities/:id/addresses', requireAuth, async (req, res) => {
     try {
-        let jsonData = await readData(dataFile);
-        const community = jsonData.communities.find(c => c.id === req.params.id);
-        if (community) {
-            const newAddress = { id: Date.now().toString(), street: req.body.street, people: [] };
-            community.addresses.push(newAddress);
-            await writeData(dataFile, jsonData);
-            res.status(201).json(newAddress);
-        } else {
-            res.status(404).json({ error: 'Community not found' });
+        const communityRef = db.collection('communities').doc(req.params.id);
+        const communityDoc = await communityRef.get();
+
+        if (!communityDoc.exists) {
+            return res.status(404).json({ error: 'Community not found' });
         }
+
+        const communityData = communityDoc.data();
+        const addresses = communityData.addresses || [];
+
+        // Create new address
+        const newAddress = {
+            id: Date.now().toString(),
+            street: req.body.street,
+            people: [],
+            codes: [],
+            createdAt: new Date().toISOString() // Use ISO string instead of serverTimestamp
+        };
+
+        // Add new address to the array
+        addresses.push(newAddress);
+
+        // Update the community document with the new addresses array
+        await communityRef.update({
+            addresses: addresses,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp() // Add timestamp to the root document
+        });
+
+        // Return the new address
+        res.status(201).json(newAddress);
     } catch (error) {
-        errorHandler(res, error, 'Error adding address');
+        console.error('Error adding address:', error);
+        res.status(500).json({ error: 'Error adding address' });
     }
 });
 
 // Route to delete an address from a community
-app.delete('/api/communities/:communityId/addresses/:addressId', requireAuth, async (req, res) => {
+app.delete('/api/communities/:id/addresses/:addressId', requireAuth, async (req, res) => {
     try {
-        let jsonData = await readData(dataFile);
-        const community = jsonData.communities.find(c => c.id === req.params.communityId);
-        if (community) {
-            community.addresses = community.addresses.filter(address => address.id !== req.params.addressId);
-            await writeData(dataFile, jsonData);
-            res.sendStatus(204);
-        } else {
-            res.status(404).json({ error: 'Community not found' });
+        const communityRef = db.collection('communities').doc(req.params.id);
+        const communityDoc = await communityRef.get();
+
+        if (!communityDoc.exists) {
+            return res.status(404).json({ error: 'Community not found' });
         }
+
+        const communityData = communityDoc.data();
+        const addresses = communityData.addresses || [];
+
+        // Filter out the address to delete
+        const updatedAddresses = addresses.filter(addr => addr.id !== req.params.addressId);
+
+        // Update the community document with the new addresses array
+        await communityRef.update({
+            addresses: updatedAddresses,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        res.status(200).json({ message: 'Address deleted successfully' });
     } catch (error) {
-        errorHandler(res, error, 'Error removing address');
+        console.error('Error deleting address:', error);
+        res.status(500).json({ error: 'Error deleting address' });
     }
 });
 
@@ -580,16 +755,12 @@ app.delete('/api/communities/:communityId/addresses/:addressId', requireAuth, as
  */
 async function logAccess(communityName, playerName, action) {
     try {
-        let logs = await readData(accessLogsFile);
-        if (!logs[communityName]) {
-            logs[communityName] = [];
-        }
-        logs[communityName].push({
+        await db.collection('access_logs').add({
+            community: communityName,
             player: playerName,
             action: action,
-            timestamp: new Date().toISOString()
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
         });
-        await writeData(accessLogsFile, logs);
     } catch (error) {
         console.error('Error logging access:', error);
     }
@@ -599,26 +770,13 @@ async function logAccess(communityName, playerName, action) {
 app.post('/api/log-access', async (req, res) => {
     const { community, player, action } = req.body;
 
-    console.log(`Received log access request for community: ${community}, player: ${player}, action: ${action}`);
-
     try {
-        let logs = await readData(accessLogsFile);
-        let jsonData = await readData(dataFile);
-        let communityLog = logs.communities.find(c => c.name === community);
+        const communityRef = await db.collection('communities')
+            .where('name', '==', community)
+            .get();
 
-        const communityExists = jsonData.communities.some(c => c.name === community);
-
-        if (!communityExists) {
+        if (communityRef.empty) {
             return res.status(404).json({ error: 'Community not found' });
-        }
-
-        if (!logs.communities) {
-            logs.communities = [];
-        }
-
-        if (!communityLog) {
-            communityLog = { name: community, logs: [] };
-            logs.communities.push(communityLog);
         }
 
         const currentTime = Date.now();
@@ -631,115 +789,163 @@ app.post('/api/log-access', async (req, res) => {
 
         lastAccessTimes[lastAccessKey] = currentTime;
 
-        communityLog.logs.push({
-            player: player,
-            action: action,
-            timestamp: new Date().toISOString()
+        await db.collection('access_logs').add({
+            community,
+            player,
+            action,
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
         });
 
-        await writeData(accessLogsFile, logs);
         res.status(200).json({ message: 'Access logged successfully' });
     } catch (error) {
-        console.error('Error logging access:', error);
-        res.status(500).json({ error: 'Error logging access' });
+        errorHandler(res, error, 'Error logging access');
     }
 });
 
 // Route to add a person to an address in a community
 app.post('/api/communities/:communityId/addresses/:addressId/people', requireAuth, async (req, res) => {
     try {
-        let jsonData = await readData(dataFile);
-        const community = jsonData.communities.find(c => c.id === req.params.communityId);
-        if (community) {
-            const address = community.addresses.find(a => a.id === req.params.addressId);
-            if (address) {
-                const newPerson = { id: Date.now().toString(), username: req.body.username, playerId: req.body.playerId };
-                address.people.push(newPerson);
-                await writeData(dataFile, jsonData);
-                res.status(201).json(newPerson);
-            } else {
-                res.status(404).json({ error: 'Address not found' });
-            }
-        } else {
-            res.status(404).json({ error: 'Community not found' });
+        const communityRef = db.collection('communities').doc(req.params.communityId);
+        const communityDoc = await communityRef.get();
+
+        if (!communityDoc.exists) {
+            return res.status(404).json({ error: 'Community not found' });
         }
+
+        const communityData = communityDoc.data();
+        const address = communityData.addresses.find(a => a.id === req.params.addressId);
+
+        if (!address) {
+            return res.status(404).json({ error: 'Address not found' });
+        }
+
+        const newPerson = {
+            id: Date.now().toString(),
+            username: req.body.username,
+            playerId: req.body.playerId
+        };
+
+        // Add the new person to the address's people array
+        if (!address.people) {
+            address.people = [];
+        }
+        address.people.push(newPerson);
+
+        // Update the community document with the modified addresses array
+        await communityRef.update({
+            addresses: communityData.addresses
+        });
+
+        res.status(201).json(newPerson);
     } catch (error) {
-        errorHandler(res, error, 'Error adding person');
+        console.error('Error adding person:', error);
+        res.status(500).json({ error: 'Error adding person' });
     }
 });
 
 // Route to delete a person from an address in a community
 app.delete('/api/communities/:communityId/addresses/:addressId/people/:personId', requireAuth, async (req, res) => {
     try {
-        let jsonData = await readData(dataFile);
-        const community = jsonData.communities.find(c => c.id === req.params.communityId);
-        if (community) {
-            const address = community.addresses.find(a => a.id === req.params.addressId);
-            if (address) {
-                address.people = address.people.filter(person => person.id !== req.params.personId);
-                await writeData(dataFile, jsonData);
-                res.sendStatus(204);
-            } else {
-                res.status(404).json({ error: 'Address not found' });
-            }
-        } else {
-            res.status(404).json({ error: 'Community not found' });
+        const communityRef = db.collection('communities').doc(req.params.communityId);
+        const communityDoc = await communityRef.get();
+
+        if (!communityDoc.exists) {
+            return res.status(404).json({ error: 'Community not found' });
         }
+
+        const communityData = communityDoc.data();
+        const address = communityData.addresses.find(a => a.id === req.params.addressId);
+
+        if (!address) {
+            return res.status(404).json({ error: 'Address not found' });
+        }
+
+        // Remove the person from the address's people array
+        address.people = address.people.filter(person => person.id !== req.params.personId);
+
+        // Update the community document with the modified addresses array
+        await communityRef.update({
+            addresses: communityData.addresses
+        });
+
+        res.status(200).json({ message: 'Person removed successfully' });
     } catch (error) {
-        errorHandler(res, error, 'Error removing person');
+        console.error('Error removing person:', error);
+        res.status(500).json({ error: 'Error removing person' });
     }
 });
 
 // Route to add a code to an address in a community
 app.post('/api/communities/:communityId/addresses/:addressId/codes', requireAuth, async (req, res) => {
     try {
-        let jsonData = await readData(dataFile);
-        const community = jsonData.communities.find(c => c.id === req.params.communityId);
-        if (community) {
-            const address = community.addresses.find(a => a.id === req.params.addressId);
-            if (address) {
-                const newCode = {
-                    id: Date.now().toString(),
-                    description: req.body.description,
-                    code: req.body.code,
-                    expiresAt: req.body.expiresAt
-                };
-                if (!address.codes) {
-                    address.codes = [];
-                }
-                address.codes.push(newCode);
-                await writeData(dataFile, jsonData);
-                res.status(201).json(newCode);
-            } else {
-                res.status(404).json({ error: 'Address not found' });
-            }
-        } else {
-            res.status(404).json({ error: 'Community not found' });
+        const communityRef = db.collection('communities').doc(req.params.communityId);
+        const communityDoc = await communityRef.get();
+
+        if (!communityDoc.exists) {
+            return res.status(404).json({ error: 'Community not found' });
         }
+
+        const communityData = communityDoc.data();
+        const address = communityData.addresses.find(a => a.id === req.params.addressId);
+
+        if (!address) {
+            return res.status(404).json({ error: 'Address not found' });
+        }
+
+        const newCode = {
+            id: Date.now().toString(),
+            description: req.body.description,
+            code: req.body.code,
+            expiresAt: req.body.expiresAt
+        };
+
+        // Add the new code to the address's codes array
+        if (!address.codes) {
+            address.codes = [];
+        }
+        address.codes.push(newCode);
+
+        // Update the community document with the modified addresses array
+        await communityRef.update({
+            addresses: communityData.addresses
+        });
+
+        res.status(201).json(newCode);
     } catch (error) {
-        errorHandler(res, error, 'Error adding code');
+        console.error('Error adding code:', error);
+        res.status(500).json({ error: 'Error adding code' });
     }
 });
 
 // Route to delete a code from an address in a community
 app.delete('/api/communities/:communityId/addresses/:addressId/codes/:codeId', requireAuth, async (req, res) => {
     try {
-        let jsonData = await readData(dataFile);
-        const community = jsonData.communities.find(c => c.id === req.params.communityId);
-        if (community) {
-            const address = community.addresses.find(a => a.id === req.params.addressId);
-            if (address && address.codes) {
-                address.codes = address.codes.filter(code => code.id !== req.params.codeId);
-                await writeData(dataFile, jsonData);
-                res.sendStatus(204);
-            } else {
-                res.status(404).json({ error: 'Address or codes not found' });
-            }
-        } else {
-            res.status(404).json({ error: 'Community not found' });
+        const communityRef = db.collection('communities').doc(req.params.communityId);
+        const communityDoc = await communityRef.get();
+
+        if (!communityDoc.exists) {
+            return res.status(404).json({ error: 'Community not found' });
         }
+
+        const communityData = communityDoc.data();
+        const address = communityData.addresses.find(a => a.id === req.params.addressId);
+
+        if (!address || !address.codes) {
+            return res.status(404).json({ error: 'Address or codes not found' });
+        }
+
+        // Remove the code from the address's codes array
+        address.codes = address.codes.filter(code => code.id !== req.params.codeId);
+
+        // Update the community document with the modified addresses array
+        await communityRef.update({
+            addresses: communityData.addresses
+        });
+
+        res.status(200).json({ message: 'Code removed successfully' });
     } catch (error) {
-        errorHandler(res, error, 'Error removing code');
+        console.error('Error removing code:', error);
+        res.status(500).json({ error: 'Error removing code' });
     }
 });
 
@@ -747,16 +953,23 @@ app.delete('/api/communities/:communityId/addresses/:addressId/codes/:codeId', r
 app.get('/api/communities/:name/logs', requireAuth, async (req, res) => {
     const communityName = req.params.name;
     try {
-        const logs = await readData(accessLogsFile);
-        const communityLog = logs.communities.find(c => c.name === communityName);
+        // Query Firestore for logs
+        const logsSnapshot = await db.collection('access_logs')
+            .where('community', '==', communityName)
+            .orderBy('timestamp', 'desc')
+            .limit(100) // Limit to last 100 logs
+            .get();
 
-        if (communityLog) {
-            res.json(communityLog.logs);
-        } else {
-            res.status(404).json({ error: 'Community logs not found' });
-        }
+        const logs = logsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            timestamp: doc.data().timestamp?.toDate() // Convert Firestore Timestamp to JS Date
+        }));
+
+        res.json(logs);
     } catch (error) {
-        errorHandler(res, error, 'Error retrieving logs');
+        console.error('Error retrieving logs:', error);
+        res.status(500).json({ error: 'Error retrieving logs' });
     }
 });
 
@@ -773,7 +986,7 @@ app.get('/api/communities/:name/logs', requireAuth, async (req, res) => {
  */
 async function removeExpiredCodes() {
     try {
-        let jsonData = await readData(dataFile);
+        let jsonData = await readData('communities');
         const now = new Date();
         let codesRemoved = false;
 
@@ -790,7 +1003,7 @@ async function removeExpiredCodes() {
         });
 
         if (codesRemoved) {
-            await writeData(dataFile, jsonData);
+            await writeData('communities', jsonData);
             console.log('Expired codes removed');
         }
     } catch (error) {

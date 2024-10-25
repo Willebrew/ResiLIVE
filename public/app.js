@@ -704,19 +704,23 @@ async function addCommunity() {
                 credentials: 'include'
             });
 
-            if (response.ok) {
-                const newCommunity = await response.json();
-                communities.push(newCommunity);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to add community');
+            }
+
+            if (data.community) {
+                communities.push(data.community);
                 renderCommunities();
-                selectCommunity(newCommunity.id);
+                selectCommunity(data.community.id);
                 updateAddCommunityButtonVisibility();
             } else {
-                const errorData = await response.json();
-                alert(errorData.error || 'Failed to add community');
+                throw new Error('Invalid server response');
             }
         } catch (error) {
             console.error('Error adding community:', error);
-            alert('An error occurred while adding the community');
+            alert(error.message || 'An error occurred while adding the community');
         }
     }
 }
@@ -751,12 +755,12 @@ async function removeCommunity(communityId) {
                 }
                 updateAddCommunityButtonVisibility();
             } else {
-                console.error('Failed to remove community:', response.statusText);
-                alert('Failed to remove community. Please try again.');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to remove community');
             }
         } catch (error) {
             console.error('Error removing community:', error);
-            alert('An error occurred while removing the community. Please try again.');
+            alert(error.message || 'An error occurred while removing the community. Please try again.');
         }
     }
 }
@@ -814,18 +818,22 @@ async function addAddress() {
                 credentials: 'include'
             });
 
-            if (response.ok) {
-                const newAddress = await response.json();
-                if (!selectedCommunity.addresses) {
-                    selectedCommunity.addresses = [];
-                }
-                selectedCommunity.addresses.push(newAddress);
-                renderAddresses();
-            } else {
-                console.error('Failed to add address:', response.statusText);
+            if (!response.ok) {
+                throw new Error('Failed to add address');
             }
+
+            const newAddress = await response.json();
+
+            // Add the new address to the local data
+            if (!selectedCommunity.addresses) {
+                selectedCommunity.addresses = [];
+            }
+            selectedCommunity.addresses.push(newAddress);
+
+            renderAddresses();
         } catch (error) {
             console.error('Error adding address:', error);
+            alert('Failed to add address. Please try again.');
         }
     }
 }
@@ -850,14 +858,15 @@ async function removeAddress(addressId) {
                 credentials: 'include'
             });
 
-            if (response.ok) {
-                selectedCommunity.addresses = selectedCommunity.addresses.filter(a => a.id !== addressId);
-                renderAddresses();
-            } else {
-                console.error('Failed to remove address:', response.statusText);
+            if (!response.ok) {
+                throw new Error('Failed to delete address');
             }
+
+            selectedCommunity.addresses = selectedCommunity.addresses.filter(a => a.id !== addressId);
+            renderAddresses();
         } catch (error) {
             console.error('Error removing address:', error);
+            alert('Failed to remove address. Please try again.');
         }
     }
 }
