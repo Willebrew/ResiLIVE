@@ -5,6 +5,7 @@
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
+const FirestoreSessionStore = require('./FirestoreSessionStore');
 const admin = require('firebase-admin');
 const bcrypt = require('bcrypt');
 const path = require('path');
@@ -19,9 +20,10 @@ const lastAccessTimes = {};
 admin.initializeApp({
     credential: admin.credential.cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL
-    })
+    }),
+    databaseURL: `https://${process.env.FIREBASE_PROJECT_ID}.firebaseio.com`
 });
 
 // Create the Firestore instance
@@ -49,10 +51,13 @@ app.use(express.static('public', {
 }));
 
 app.use(session({
-    secret: 'your-secret-key',
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
-    saveUninitialized: true,
-    cookie: { secure: true } // SET TO FALSE FOR DEBUGGING
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
 }));
 
 app.use(cors({
