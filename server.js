@@ -75,6 +75,42 @@ app.get('/csrf-token', (req, res) => {
 });
 
 /**
+ * Creates an initial superuser account if one does not already exist.
+ * The superuser account has the username 'superuser' and the password 'root'.
+ * @returns {Promise<void>}
+ */
+async function createInitialSuperuser() {
+    try {
+        // Check if superuser already exists
+        const superuserSnapshot = await db.collection('users')
+            .where('role', '==', 'superuser')
+            .get();
+
+        if (!superuserSnapshot.empty) {
+            console.log('Superuser already exists');
+            return;
+        }
+
+        // Create superuser
+        const hashedPassword = await bcrypt.hash('root', 10);
+        const superuser = {
+            username: 'superuser',
+            password: hashedPassword,
+            role: 'superuser',
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+
+        await db.collection('users').add(superuser);
+        console.log('Initial superuser created successfully');
+    } catch (error) {
+        console.error('Error creating initial superuser:', error);
+    }
+}
+
+// Uncomment createInitialSuperuser(); to create initial superuser, then comment out again
+// createInitialSuperuser();
+
+/**
  * Reads data from a specified file.
  * @param {string} collection - The path to the file.
  * @returns {Promise<Object>} The parsed JSON data from the file.
@@ -988,11 +1024,9 @@ app.get('/api/communities/:name/logs', requireAuth, async (req, res) => {
 
 /**
  * Removes expired codes from all addresses in all communities.
- *
  * This function reads the data from the specified data file, iterates through all communities and their addresses,
  * and filters out any codes that have expired. If any expired codes are found and removed, the updated data is written
  * back to the data file. The function logs a message to the console if expired codes are removed.
- *
  * @async
  * @function removeExpiredCodes
  * @returns {Promise<void>}
