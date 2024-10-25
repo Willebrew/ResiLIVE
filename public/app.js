@@ -606,6 +606,12 @@ function renderAddresses() {
         selectedCommunity.addresses.forEach(address => {
             const li = document.createElement('li');
             li.className = 'address-item';
+
+            if (address.isNew) {
+                li.classList.add('new-item');
+                delete address.isNew;
+            }
+
             li.innerHTML = `
                 <div class="address-main">
                     <button class="remove-btn" onclick="removeAddress('${address.id}')">-</button>
@@ -849,8 +855,8 @@ async function addAddress() {
             }
 
             const newAddress = await response.json();
+            newAddress.isNew = true;
 
-            // Add the new address to the local data
             if (!selectedCommunity.addresses) {
                 selectedCommunity.addresses = [];
             }

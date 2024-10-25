@@ -166,8 +166,8 @@ button:hover {
     opacity: 0.8;
 }
 
-.address-item {
-    margin-bottom: 10px;
+.address-item.new-item {
+    animation: fadeIn 0.3s ease-out;
 }
 
 .address-main {
