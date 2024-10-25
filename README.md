@@ -161,6 +161,8 @@ To get the environment variables from Firebase, open your Firebase project, pres
 FIREBASE_PROJECT_ID=your-project-id
 FIREBASE_PRIVATE_KEY="your-private-key"
 FIREBASE_CLIENT_EMAIL=your-client-email
+SESSION_SECRET=a-very-long-random-string
+NODE_ENV=development
 ```
 
 ## Contributing
