@@ -36,23 +36,88 @@ ResiLIVE is a comprehensive community management system designed to streamline a
 - Storage: JSON file-based
 - Authentication: Session-based with bcrypt
 
+## Security Features
+
+- **Authentication Security**
+  - Password hashing using bcrypt
+  - Session-based authentication with secure cookies
+  - Role-based access control (user, admin, superuser)
+
+- **Data Security**
+  - Firebase Firestore security rules
+  - Input validation and sanitization
+  - CSRF protection via lusca
+  - Rate limiting on API endpoints
+
+- **Access Control**
+  - Role-based permissions
+  - Case-insensitive username validation
+  - Protected admin routes
+  - Superuser account protection
+
+- **API Security**
+  - Request rate limiting
+  - CORS configuration
+  - Secure session management
+  - Protected endpoints requiring authentication
+
 ## Getting Started
 
 1. Clone the repository
 2. Install dependencies: `npm install`
 3. Set up Firebase:
    - Create a Firebase project
-   - Set up Firestore Database
-   - Add Firebase credentials to .env file
-4. Start the server: `node server.js`
-5. Access the web interface at `http://localhost:3000`
-6. Default superuser credentials:
+   - Set up Firestore Database (Rules below)
+   - Add Firebase credentials to .env file (Example below)
+4. If debugging locally, make sure to set `secure: false`
+5. Start the server: `node server.js`
+6. Access the web interface at `http://localhost:3000`
+7. Default superuser credentials:
    - Username: Superuser
    - Password: root (change immediately)
 
-## Environment Variables
+## Firebase Configuration
+
+### Firestore Rules
+
+In the **Rules** tab of your Firestore Database, configure the rules:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+    }
+    
+    match /communities/{communityId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+    }
+    
+    match /access_logs/{logId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+  }
+}
+```
+
+## Environment Variables (.env)
 
 ```env
 FIREBASE_PROJECT_ID=your-project-id
 FIREBASE_PRIVATE_KEY=your-private-key
 FIREBASE_CLIENT_EMAIL=your-client-email
+```
+
+## Contributing
+
+We welcome contributions to ResiLIVE! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) guide for details on our code of conduct and the process for submitting pull requests.
+
+## License
+
+This project is licensed under the [Apache License](LICENSE).
