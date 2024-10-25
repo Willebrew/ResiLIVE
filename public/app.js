@@ -608,8 +608,10 @@ function renderAddresses() {
             li.className = 'address-item';
 
             if (address.isNew) {
-                li.classList.add('new-item');
-                delete address.isNew;
+                li.classList.add('new-address');
+                setTimeout(() => {
+                    delete address.isNew;
+                }, 300);
             }
 
             li.innerHTML = `
@@ -861,7 +863,6 @@ async function addAddress() {
                 selectedCommunity.addresses = [];
             }
             selectedCommunity.addresses.push(newAddress);
-
             renderAddresses();
         } catch (error) {
             console.error('Error adding address:', error);
