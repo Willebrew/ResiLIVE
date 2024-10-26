@@ -2,7 +2,9 @@
 
 # ResiLIVE
 
-ResiLIVE is a comprehensive community management system designed to streamline access control and logging for residential communities. It provides a robust backend API and a user-friendly web interface for managing communities, addresses, residents, and access codes.
+ResiLIVE is a comprehensive community management system designed to streamline access control and logging for 
+residential communities. It provides a robust backend API and a user-friendly web interface for managing communities, 
+addresses, residents, and access codes.
 
 ## Branch Overview
 
@@ -69,16 +71,13 @@ ResiLIVE is a comprehensive community management system designed to streamline a
     - Create a Firebase project
     - Set up Firestore Database (Rules below)
     - Add Firebase credentials to .env file (Example below)
-4. **For first time use**, uncomment createInitialSuperuser(), run `node server.js`, then close the server and comment out the function
+4. **For first time use**, uncomment createInitialSuperuser(), run `node server.js`, then close the server and comment 
+out the function
 5. Start the server: `node server.js`
 6. Access the web interface at `http://localhost:3000`
 7. Default superuser credentials:
     - Username: superuser
     - Password: root (change immediately)
-
-# Firestore Database Setup
-
-To set up your Firestore database, you need to create the following collections: users, communities, and access_logs. When creating each collection, Firestore will ask for a Field, leave it blank, press the remove (-) button, and press save. Then under that collection's tab, delete the document that was created by default. Repeat for each collection.
 
 # Firestore Layout
 
@@ -155,7 +154,8 @@ service cloud.firestore {
 
 ## Environment Variables (.env)
 
-To get the environment variables from Firebase, open your Firebase project, press the gear next to "Project Overview", select "Project Overview" and press "Project settings". In the "Service Accounts" tab, make sure node.js is selected and press "Generate new private key" (Generate key). This will download a JSON file to your machine with the credentials. Open the file and copy the necessary values into the .env file in the format given below.
+To get the environment variables from Firebase, open your Firebase project, press the gear next to "Project Overview", 
+select "Project Overview" and press "Project settings". In the "Service Accounts" tab, make sure node.js is selected and press "Generate new private key" (Generate key). This will download a JSON file to your machine with the credentials. Open the file and copy the necessary values into the .env file in the format given below.
 
 ```
 FIREBASE_PROJECT_ID=your-project-id
@@ -167,7 +167,8 @@ NODE_ENV=development
 
 ## Contributing
 
-We welcome contributions to ResiLIVE! Please read our [CONTRIBUTING.md](./CONTRIBUTING.md) guide for details on Contributing.
+We welcome contributions to ResiLIVE! Please read our [CONTRIBUTING.md](./CONTRIBUTING.md) guide for details on 
+Contributing.
 
 ## License
 
