@@ -99,7 +99,6 @@ async function createInitialSuperuser() {
         const hashedPassword = await bcrypt.hash('root', 10);
         const superuser = {
             username: 'superuser',
-            usernameLower: 'superuser',
             password: hashedPassword,
             role: 'superuser',
             createdAt: admin.firestore.FieldValue.serverTimestamp()
@@ -208,9 +207,8 @@ app.post('/api/register', requireAuth, requireAdmin, async (req, res) => {
         const { username, password } = req.body;
         const usersRef = db.collection('users');
 
-        // Check for existing user case-insensitively
         const existingUser = await usersRef
-            .where('usernameLower', '==', username.toLowerCase())
+            .where('username', '==', username.toLowerCase())
             .get();
 
         if (!existingUser.empty) {
@@ -220,8 +218,7 @@ app.post('/api/register', requireAuth, requireAdmin, async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = {
             id: Date.now().toString(),
-            username: username,
-            usernameLower: username.toLowerCase(),
+            username,
             password: hashedPassword,
             role: 'user'
         };
@@ -273,11 +270,7 @@ app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
         const usersRef = db.collection('users');
-
-        // Query using lowercase username
-        const snapshot = await usersRef
-            .where('usernameLower', '==', username.toLowerCase())
-            .get();
+        const snapshot = await usersRef.where('username', '==', username.toLowerCase()).get();
 
         if (snapshot.empty) {
             return res.status(401).json({ error: 'Invalid credentials' });
@@ -451,7 +444,7 @@ app.post('/api/users', requireAuth, requireAdmin, async (req, res) => {
         const { username, password } = req.body;
 
         const existingUser = await db.collection('users')
-            .where('usernameLower', '==', username.toLowerCase())
+            .where('username', '==', username.toLowerCase())
             .get();
 
         if (!existingUser.empty) {
@@ -460,8 +453,7 @@ app.post('/api/users', requireAuth, requireAdmin, async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = {
-            username: username,
-            usernameLower: username.toLowerCase(),
+            username: username.toLowerCase(),
             password: hashedPassword,
             role: 'user',
             createdAt: admin.firestore.FieldValue.serverTimestamp()
