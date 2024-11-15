@@ -1,8 +1,5 @@
 # Security Policy
 
-I am aware of some possible vulnerabilities in this project but have not prioritized patching them due to its small scale. Any contributions to help improve the security of the project are greatly welcomed.
-
-
 ## Reporting a Vulnerability
 
 If you find a vulnerability, you can:
