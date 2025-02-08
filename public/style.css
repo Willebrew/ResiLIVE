@@ -5,40 +5,7 @@ body {
     margin: 0;
     padding: 0;
     min-height: 100vh;
-    min-width: 1024px;
     overflow-x: auto;
-}
-
-@media screen and (max-width: 1023px) {
-    body * {
-        display: none !important;
-    }
-
-    body {
-        background-color: #1a1a1a;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-
-    body::before {
-        content: "This site is only available on desktop devices";
-        color: #ffffff;
-        text-align: center;
-        font-family: Arial, sans-serif;
-        font-size: 1.2em;
-        position: absolute;
-        width: 90%;
-        max-width: 400px;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        padding: 20px;
-    }
 }
 
 .container {
@@ -147,6 +114,8 @@ button {
     width: 30px;
     height: 30px;
     font-size: 20px;
+    display: block;
+    margin: 10px auto 0;
 }
 
 .add-btn2 {
@@ -239,11 +208,6 @@ button:hover {
 h4 {
     margin-top: 0;
     margin-bottom: 10px;
-}
-
-.add-btn {
-    display: block;
-    margin: 10px auto 0;
 }
 
 @keyframes fadeIn {
@@ -409,10 +373,14 @@ button:hover {
 .log-btn-icon {
     margin-right: 8px;
     font-size: 1.2em;
+    display: flex;
+    align-items: center;
 }
 
 .log-btn-text {
     font-size: 1em;
+    display: flex;
+    align-items: center;
 }
 
 .popup {
@@ -470,7 +438,6 @@ button:hover {
     width: 50px;
     height: 50px;
     font-size: 15px;
-
 }
 
 .popup {
@@ -602,7 +569,6 @@ button:hover {
     width: 50px;
     height: 50px;
     font-size: 15px;
-
 }
 
 .close-btn-popup:hover {
@@ -654,4 +620,80 @@ button:hover {
 
 .change-password-btn:hover {
     background-color: #27ae60;
+}
+
+@media screen and (max-width: 768px) {
+    .sidebar {
+        width: 150px;
+        padding: 15px;
+    }
+    .container {
+        padding-left: 150px;
+    }
+    main {
+        padding: 15px 20px;
+    }
+    .change-password-btn {
+        width: 100% !important;
+        height: auto !important;
+        box-sizing: border-box;
+        font-size: 14px;
+        padding: 8px;
+    }
+    main #communityName,
+    main h3,
+    main #addressList {
+        width: fit-content;
+        margin: 20px auto 0;
+        text-align: center;
+        transform: translateX(20px);
+    }
+    #addAddressBtn {
+        display: block !important;
+        margin: 10px auto !important;
+        transform: translateX(20px);
+    }
+    .address-main {
+        padding: 15px 20px;
+        font-size: 1.1em;
+        border-radius: 25px;
+    }
+    .address-text {
+        font-size: 1.1em;
+    }
+    h1 {
+        font-size: 1.8em;
+    }
+    h2 {
+        font-size: 1.1em;
+    }
+    h3 {
+        font-size: 0.95em;
+    }
+    .subtitle {
+        font-size: 0.65em;
+    }
+    button {
+        width: 22px;
+        height: 22px;
+        font-size: 12px;
+    }
+    .add-btn {
+        width: 26px;
+        height: 26px;
+        font-size: 18px;
+    }
+    .add-btn2 {
+        width: 26px;
+        height: 26px;
+        font-size: 18px;
+    }
+    .logout-btn, .change-password-btn {
+        font-size: 14px;
+        padding: 8px;
+    }
+    .login-container {
+        margin: 50px auto;
+        padding: 15px;
+    }
 }

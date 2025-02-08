@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ResiLIVE</title>
-    <link rel="icon" type="image/png" href="icon.png">
-    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="icon.png" />
+    <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 <div class="container">
@@ -17,7 +17,6 @@
             <ul id="communityList"></ul>
             <button class="add-btn" id="12" onclick="addCommunity()">+</button>
         </div>
-
         <div class="sidebar-bottom">
             <button id="showUsersBtn" class="user-btn">
                 <span class="log-btn-icon">🔒</span>
@@ -27,17 +26,15 @@
                 <span class="log-btn-icon">📋</span>
                 <span class="log-btn-text">Show Logs</span>
             </button>
-
             <div id="allowedUsersManagement">
                 <h3>Allowed Users</h3>
                 <select id="allowedUsersDropdown" multiple></select>
-                <input type="text" id="allowedUsersInput" placeholder="Add usernames here">
+                <input type="text" id="allowedUsersInput" placeholder="Add usernames here" />
                 <div class="button-group">
                     <button class="add-btn" onclick="updateAllowedUsers()">+</button>
                     <button class="remove-btn-user" onclick="removeSelectedUsers()">-</button>
                 </div>
             </div>
-
             <div class="user-section">
                 <p id="userName">Welcome, <span></span></p>
                 <button id="logoutBtn" class="logout-btn">Logout</button>
@@ -45,6 +42,7 @@
             </div>
         </div>
     </aside>
+
     <main>
         <div id="logPopup" class="popup">
             <div class="popup-content">
@@ -58,23 +56,23 @@
                 <h2>User Management</h2>
                 <div id="usersList"></div>
                 <div id="addUserForm">
-                    <input type="text" id="newUsername" placeholder="Username">
-                    <input type="password" id="newPassword" placeholder="Password">
+                    <input type="text" id="newUsername" placeholder="Username" />
+                    <input type="password" id="newPassword" placeholder="Password" />
                     <button class="add-btn2" onclick="addUser()">+</button>
                 </div>
                 <button class="close-btn-popup" onclick="closeUsersPopup()">Close</button>
             </div>
         </div>
+
         <h2 id="communityName">Please create a Community</h2>
         <h3>Addresses:</h3>
         <ul id="addressList"></ul>
         <button id="addAddressBtn" class="add-btn">+</button>
-        <div id="addressDetails" style="display: none;">
+        <div id="addressDetails" class="address-details">
             <h3 id="selectedAddress"></h3>
             <h4>User IDs:</h4>
             <ul id="userIdList"></ul>
             <button class="add-btn" onclick="addUserId()">+</button>
-
             <h4>Codes:</h4>
             <ul id="codeList"></ul>
             <button class="add-btn" onclick="addCode()">+</button>
