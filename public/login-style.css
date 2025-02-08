@@ -10,38 +10,6 @@ body {
     align-items: center;
 }
 
-@media screen and (max-width: 1023px) {
-    body * {
-        display: none !important;
-    }
-
-    body {
-        background-color: #1a1a1a;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-
-    body::before {
-        content: "This site is only available on desktop devices";
-        color: #ffffff;
-        text-align: center;
-        font-family: Arial, sans-serif;
-        font-size: 1.2em;
-        position: absolute;
-        width: 90%;
-        max-width: 400px;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        padding: 20px;
-    }
-}
-
 .container {
     background-color: #252525;
     padding: 40px;
