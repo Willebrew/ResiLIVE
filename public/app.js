@@ -510,15 +510,24 @@ async function updateLogs(communityName) {
 function displayLogs(logs) {
     const logContent = document.getElementById('logContent');
     logContent.innerHTML = '';
+
+    // Sort logs descending by timestamp
     logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
     logs.forEach(log => {
         const logEntry = document.createElement('div');
         logEntry.className = 'log-entry';
         const timestamp = new Date(log.timestamp).toLocaleString();
+
+        // If the log action contains "Access denied", style it in red; otherwise use the default.
+        const actionStyle = log.action.includes("Access denied")
+            ? 'color: #FF3B30;'
+            : 'color: var(--color-btn-add-bg);';
+
         logEntry.innerHTML = `
             <span class="timestamp">${timestamp}</span><br>
-            <span class="player">${log.player}</span>:
-            <span class="action">${log.action}</span>
+            <span class="player">${log.player}</span>: 
+            <span class="action" style="${actionStyle}">${log.action}</span>
         `;
         logContent.appendChild(logEntry);
     });
