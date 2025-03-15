@@ -131,6 +131,14 @@ h1, h2, h3, h4, p {
     background-color: #e8e8e8; /* slightly darker on hover */
 }
 
+/* Make these buttons smaller on very small screens */
+@media (max-width: 500px) {
+    .topnav-btn {
+        padding: 6px 10px;
+        font-size: 0.8em;
+    }
+}
+
 /********************************************************
   USER MENU (CIRCLE + DROPDOWN)
 *********************************************************/

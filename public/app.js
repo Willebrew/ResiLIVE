@@ -48,18 +48,17 @@ let currentUsername = null;
 
 /**
  * Event listener for the DOMContentLoaded event to fetch the CSRF token when the document is fully loaded.
- * @event
  */
 document.addEventListener('DOMContentLoaded', async () => {
     await fetchCsrfToken();
+    checkLoginStatus();
+    // Set up event listeners for user menu buttons and hamburger toggle.
+    setupUIEventListeners();
 });
 
 /**
  * Fetches the CSRF token from the server and stores it in the csrfToken variable.
- * If a hidden input field with the ID 'csrfToken' exists, sets its value to the fetched CSRF token.
- * @async
- * @function fetchCsrfToken
- * @returns {Promise<void>}
+ * Also sets the value of a hidden CSRF input if available.
  */
 async function fetchCsrfToken() {
     try {
@@ -69,7 +68,6 @@ async function fetchCsrfToken() {
         }
         const data = await response.json();
         csrfToken = data.csrfToken;
-
         const csrfInput = document.getElementById('csrfToken');
         if (csrfInput) {
             csrfInput.value = csrfToken;
@@ -80,19 +78,16 @@ async function fetchCsrfToken() {
 }
 
 /**
- * Updates the username displayed in the UI (for user circle + dropdown).
+ * Updates the username displayed in the UI (for user menu).
+ * Also sets the user circle initial and full name.
  * @param {string} username - The username to display.
  */
 function updateUserName(username) {
     currentUsername = username || 'Guest';
-
-    // 1) Set the user circle initial
     const userCircle = document.getElementById('userCircle');
     if (userCircle) {
         userCircle.textContent = currentUsername.charAt(0).toUpperCase() || '?';
     }
-
-    // 2) Set the user menu text
     const userFullName = document.getElementById('userFullName');
     if (userFullName) {
         userFullName.textContent = 'Welcome, ' + currentUsername;
@@ -101,9 +96,6 @@ function updateUserName(username) {
 
 /**
  * Checks the login status of the user and updates the UI accordingly.
- * @async
- * @function checkLoginStatus
- * @returns {Promise<void>}
  */
 async function checkLoginStatus() {
     try {
@@ -112,9 +104,7 @@ async function checkLoginStatus() {
             const data = await response.json();
             currentUserId = data.userId;
             updateUserName(data.username);
-
             isAdmin = data.role === 'admin' || data.role === 'superuser';
-
             if (isAdmin) {
                 document.getElementById('allowedUsersManagement').style.display = 'block';
             } else {
@@ -127,7 +117,6 @@ async function checkLoginStatus() {
                 if (addCommunityBtn) addCommunityBtn.remove();
                 if (showUsersBtn) showUsersBtn.remove();
             }
-
             fetchData();
         } else {
             updateUserName('Guest');
@@ -138,11 +127,69 @@ async function checkLoginStatus() {
         updateUserName('Logged Out');
     }
 }
-document.addEventListener('DOMContentLoaded', checkLoginStatus);
+
+/**
+ * Sets up event listeners for UI elements including the hamburger button,
+ * user menu toggle, Change Password, and Logout buttons.
+ */
+function setupUIEventListeners() {
+    // Hamburger button for sidebar toggle on mobile
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    if (hamburgerBtn) {
+        hamburgerBtn.addEventListener('click', () => {
+            document.querySelector('.sidebar').classList.toggle('sidebar-open');
+        });
+    }
+
+    // User menu toggle on user circle click
+    const userCircle = document.getElementById('userCircle');
+    const userMenu = document.getElementById('userMenu');
+    if (userCircle && userMenu) {
+        userCircle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userMenu.classList.toggle('show');
+        });
+        // Hide user menu if clicking outside of it
+        document.addEventListener('click', (evt) => {
+            if (!userMenu.contains(evt.target) && evt.target !== userCircle) {
+                userMenu.classList.remove('show');
+            }
+        });
+    }
+
+    // Hook up Change Password button
+    const changePasswordBtn = document.getElementById('changePasswordBtn');
+    if (changePasswordBtn) {
+        changePasswordBtn.addEventListener('click', changePassword);
+    }
+
+    // Hook up Logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
+    }
+
+    // Hook up Show Logs and Show Users buttons
+    const showLogsBtn = document.getElementById('showLogsBtn');
+    if (showLogsBtn) {
+        showLogsBtn.addEventListener('click', () => {
+            showLogs(selectedCommunity ? selectedCommunity.name : '');
+        });
+    }
+    const showUsersBtn = document.getElementById('showUsersBtn');
+    if (showUsersBtn) {
+        showUsersBtn.addEventListener('click', showUsersPopup);
+    }
+
+    // Hook up Add Address button
+    const addAddressBtn = document.getElementById('addAddressBtn');
+    if (addAddressBtn) {
+        addAddressBtn.addEventListener('click', addAddress);
+    }
+}
 
 /**
  * Fetches users from the server and updates the UI.
- * @returns {Promise<void>}
  */
 async function fetchUsers() {
     try {
@@ -159,9 +206,8 @@ async function fetchUsers() {
 }
 
 /**
- * Toggles a user's role between admin and user
- * @async
- * @param {string} userId - The ID of the user to toggle role
+ * Toggles a user's role between admin and user.
+ * @param {string} userId - The ID of the user to toggle role.
  */
 async function toggleUserRole(userId) {
     try {
@@ -173,15 +219,11 @@ async function toggleUserRole(userId) {
             },
             credentials: 'include'
         });
-
         if (response.ok) {
             const data = await response.json();
             const userIndex = users.findIndex(u => u.id === userId);
-
             if (userIndex !== -1) {
                 users[userIndex].role = data.newRole;
-
-                // If user was made admin, remove them from all communities' allowed users lists
                 if (data.newRole === 'admin') {
                     const username = users[userIndex].username;
                     communities.forEach(community => {
@@ -189,13 +231,10 @@ async function toggleUserRole(userId) {
                             allowedUser => allowedUser !== username
                         );
                     });
-
-                    // Update the UI for the currently selected community
                     if (selectedCommunity) {
                         renderAllowedUsers();
                     }
                 }
-
                 renderUsers();
             }
         } else {
@@ -210,8 +249,6 @@ async function toggleUserRole(userId) {
 
 /**
  * Renders the list of users in the UI.
- * @function renderUsers
- * @returns {void}
  */
 function renderUsers() {
     const usersList = document.getElementById('usersList');
@@ -238,9 +275,6 @@ function renderUsers() {
 
 /**
  * Adds a new user by sending a POST request to the server.
- * @async
- * @function addUser
- * @returns {Promise<void>}
  */
 async function addUser() {
     const username = document.getElementById('newUsername').value;
@@ -256,7 +290,6 @@ async function addUser() {
                 body: JSON.stringify({ username, password }),
                 credentials: 'include'
             });
-
             if (response.ok) {
                 fetchUsers();
                 document.getElementById('newUsername').value = '';
@@ -278,10 +311,7 @@ async function addUser() {
 
 /**
  * Removes a user by sending a DELETE request to the server.
- * @async
- * @function removeUser
  * @param {string} userId - The ID of the user to be removed.
- * @returns {Promise<void>}
  */
 async function removeUser(userId) {
     if (confirm('Are you sure you want to remove this user?')) {
@@ -294,12 +324,10 @@ async function removeUser(userId) {
                 },
                 credentials: 'include'
             });
-
             if (response.ok) {
                 const data = await response.json();
                 fetchUsers();
                 alert('User removed successfully');
-
                 if (data.updatedCommunities && Array.isArray(data.updatedCommunities)) {
                     data.updatedCommunities.forEach(updatedCommunity => {
                         const communityIndex = communities.findIndex(c => c.id === updatedCommunity.id);
@@ -307,7 +335,6 @@ async function removeUser(userId) {
                             communities[communityIndex].allowedUsers = updatedCommunity.allowedUsers;
                         }
                     });
-
                     if (selectedCommunity && data.updatedCommunities.some(c => c.id === selectedCommunity.id)) {
                         renderAllowedUsers();
                     }
@@ -326,9 +353,6 @@ async function removeUser(userId) {
 
 /**
  * Fetches community data from the server and updates the UI.
- * @async
- * @function fetchData
- * @returns {Promise<void>}
  */
 async function fetchData() {
     try {
@@ -339,10 +363,8 @@ async function fetchData() {
         }
         communities = await response.json();
         renderCommunities();
-
         const addAddressBtn = document.getElementById('addAddressBtn');
         const addressesHeader = document.querySelector('main h3');
-
         if (communities.length > 0) {
             addAddressBtn.style.display = 'block';
             addressesHeader.style.display = 'block';
@@ -352,7 +374,6 @@ async function fetchData() {
             addressesHeader.style.display = 'none';
             document.getElementById('communityName').textContent = 'Please create a Community';
         }
-
         if (communities.length >= 8) {
             const addButton = document.getElementById('12');
             if (addButton) {
@@ -366,9 +387,6 @@ async function fetchData() {
 
 /**
  * Logs out the user by sending a POST request to the server.
- * @async
- * @function logout
- * @returns {Promise<void>}
  */
 async function logout() {
     try {
@@ -380,7 +398,6 @@ async function logout() {
             },
             credentials: 'include'
         });
-
         if (response.ok) {
             window.location.href = '/login.html';
         } else {
@@ -393,25 +410,19 @@ async function logout() {
 
 /**
  * Changes the password for the currently logged-in user.
- * @async
- * @function changePassword
- * @returns {Promise<void>}
  */
 async function changePassword() {
     const currentPassword = prompt('Enter current password:');
     const newPassword = prompt('Enter new password:');
     const confirmPassword = prompt('Confirm new password:');
-
     if (!currentPassword || !newPassword || !confirmPassword) {
         alert('All fields are required');
         return;
     }
-
     if (newPassword !== confirmPassword) {
         alert('New passwords do not match');
         return;
     }
-
     try {
         const response = await fetch('/api/change-password', {
             method: 'POST',
@@ -422,7 +433,6 @@ async function changePassword() {
             body: JSON.stringify({ currentPassword, newPassword }),
             credentials: 'include'
         });
-
         const data = await response.json();
         if (response.ok) {
             alert(data.message);
@@ -435,37 +445,9 @@ async function changePassword() {
     }
 }
 
-// Add event listener for the "Show Logs" button
-document.addEventListener('DOMContentLoaded', function() {
-    const showLogsBtn = document.getElementById('showLogsBtn');
-    if (showLogsBtn) {
-        showLogsBtn.addEventListener('click', function() {
-            showLogs(selectedCommunity ? selectedCommunity.name : '');
-        });
-    }
-});
-
-// Add event listener for the "Show Users" button
-document.addEventListener('DOMContentLoaded', function() {
-    const showUsersBtn = document.getElementById('showUsersBtn');
-    if (showUsersBtn) {
-        showUsersBtn.addEventListener('click', function() {
-            showUsersPopup();
-        });
-    }
-});
-
-// Add event listener for the "Add Address" button
-document.addEventListener('DOMContentLoaded', function() {
-    const addAddressBtn = document.getElementById('addAddressBtn');
-    if (addAddressBtn) {
-        addAddressBtn.addEventListener('click', addAddress);
-    }
-});
-
 /**
  * Displays logs for a specific community.
- * @param {string} communityName - The name of the community to show logs for.
+ * @param {string} communityName - The name of the community.
  */
 function showLogs(communityName) {
     if (!communityName) {
@@ -475,11 +457,9 @@ function showLogs(communityName) {
     document.getElementById('logPopupTitle').textContent = `Logs for ${communityName}`;
     document.getElementById('logPopup').style.display = 'block';
     updateLogs(communityName);
-
     if (window.logUpdateInterval) {
         clearInterval(window.logUpdateInterval);
     }
-
     window.logUpdateInterval = setInterval(() => updateLogs(communityName), 5000);
 }
 
@@ -502,7 +482,7 @@ function closeLogPopup() {
 }
 
 /**
- * Closes the user popup.
+ * Closes the user management popup.
  */
 function closeUsersPopup() {
     document.getElementById('usersPopup').style.display = 'none';
@@ -510,10 +490,7 @@ function closeUsersPopup() {
 
 /**
  * Fetches and updates logs for a specific community.
- * @async
- * @function updateLogs
- * @param {string} communityName - The name of the community to update logs for.
- * @returns {Promise<void>}
+ * @param {string} communityName - The name of the community.
  */
 async function updateLogs(communityName) {
     try {
@@ -536,9 +513,7 @@ async function updateLogs(communityName) {
 function displayLogs(logs) {
     const logContent = document.getElementById('logContent');
     logContent.innerHTML = '';
-
     logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
     logs.forEach(log => {
         const logEntry = document.createElement('div');
         logEntry.className = 'log-entry';
@@ -554,8 +529,6 @@ function displayLogs(logs) {
 
 /**
  * Renders the list of communities in the UI.
- * @function renderCommunities
- * @returns {void}
  */
 function renderCommunities() {
     const communityList = document.getElementById('communityList');
@@ -580,9 +553,7 @@ function renderCommunities() {
 
 /**
  * Selects a community by its ID and updates the UI.
- * @function selectCommunity
  * @param {string} communityId - The ID of the community to select.
- * @returns {void}
  */
 function selectCommunity(communityId) {
     selectedCommunity = communities.find(c => c.id === communityId);
@@ -594,9 +565,7 @@ function selectCommunity(communityId) {
 }
 
 /**
- * Renders the list of addresses for the selected community in the UI.
- * @function renderAddresses
- * @returns {void}
+ * Renders the list of addresses for the selected community.
  */
 function renderAddresses() {
     const addressList = document.getElementById('addressList');
@@ -605,14 +574,12 @@ function renderAddresses() {
         selectedCommunity.addresses.forEach(address => {
             const li = document.createElement('li');
             li.className = 'address-item';
-
             if (address.isNew) {
                 li.classList.add('new-address');
                 setTimeout(() => {
                     delete address.isNew;
                 }, 300);
             }
-
             li.innerHTML = `
                 <div class="address-main">
                     <button class="remove-btn" onclick="removeAddress('${address.id}')">Remove</button>
@@ -640,9 +607,7 @@ function renderAddresses() {
 
 /**
  * Toggles the visibility of address details.
- * @function toggleAddressDetails
- * @param {string} addressId - The ID of the address to toggle details for.
- * @returns {void}
+ * @param {string} addressId - The ID of the address.
  */
 function toggleAddressDetails(addressId) {
     const detailsElement = document.getElementById(`details-${addressId}`);
@@ -650,10 +615,8 @@ function toggleAddressDetails(addressId) {
 }
 
 /**
- * Renders the list of user IDs for a given address in the UI.
- * @function renderUserIds
- * @param {Object} address - The address object containing user IDs.
- * @returns {void}
+ * Renders the list of user IDs for a given address.
+ * @param {Object} address - The address object.
  */
 function renderUserIds(address) {
     const userIdList = document.querySelector(`#details-${address.id} .user-id-list`);
@@ -671,10 +634,8 @@ function renderUserIds(address) {
 }
 
 /**
- * Renders the list of codes for a given address in the UI.
- * @function renderCodes
- * @param {Object} address - The address object containing codes.
- * @returns {void}
+ * Renders the list of codes for a given address.
+ * @param {Object} address - The address object.
  */
 function renderCodes(address) {
     const codeList = document.querySelector(`#details-${address.id} .code-list`);
@@ -692,24 +653,19 @@ function renderCodes(address) {
 }
 
 /**
- * Adds a new community by prompting the user for a name and sending a POST request.
- * @async
- * @function addCommunity
- * @returns {Promise<void>}
+ * Adds a new community by prompting for a name and sending a POST request.
  */
 async function addCommunity() {
     if (communities.length >= 8) {
         alert('Maximum number of communities reached');
         return;
     }
-
     const name = prompt('Enter community name (no spaces allowed):');
     if (name) {
         if (name.includes(' ')) {
             alert('Community name cannot contain spaces. Please try again.');
             return;
         }
-
         try {
             const response = await fetch('/api/communities', {
                 method: 'POST',
@@ -720,19 +676,15 @@ async function addCommunity() {
                 body: JSON.stringify({ name }),
                 credentials: 'include'
             });
-
             const data = await response.json();
-
             if (!response.ok) {
                 throw new Error(data.error || 'Failed to add community');
             }
-
             if (data.community) {
                 communities.push(data.community);
                 renderCommunities();
                 selectCommunity(data.community.id);
                 updateAddCommunityButtonVisibility();
-
                 const addAddressBtn = document.getElementById('addAddressBtn');
                 const addressesHeader = document.querySelector('main h3');
                 if (communities.length > 0) {
@@ -751,10 +703,7 @@ async function addCommunity() {
 
 /**
  * Removes a community by its ID after user confirmation.
- * @async
- * @function removeCommunity
- * @param {string} communityId - The ID of the community to remove.
- * @returns {Promise<void>}
+ * @param {string} communityId - The ID of the community.
  */
 async function removeCommunity(communityId) {
     if (confirm('Are you sure you want to remove this community?')) {
@@ -767,14 +716,11 @@ async function removeCommunity(communityId) {
                 },
                 credentials: 'include'
             });
-
             if (response.ok) {
                 communities = communities.filter(c => c.id !== communityId);
                 renderCommunities();
-
                 const addAddressBtn = document.getElementById('addAddressBtn');
                 const addressesHeader = document.querySelector('main h3');
-
                 if (communities.length > 0) {
                     selectCommunity(communities[0].id);
                     addAddressBtn.style.display = 'block';
@@ -800,14 +746,11 @@ async function removeCommunity(communityId) {
 
 /**
  * Updates the visibility of the "Add Community" button based on the number of communities.
- * @function updateAddCommunityButtonVisibility
- * @returns {void}
  */
 function updateAddCommunityButtonVisibility() {
     const MAX_COMMUNITIES = 8;
     const sidebarTop = document.querySelector('.sidebar-top');
     let addButton = document.getElementById('12');
-
     if (communities.length >= MAX_COMMUNITIES) {
         if (addButton) addButton.remove();
     } else {
@@ -817,7 +760,6 @@ function updateAddCommunityButtonVisibility() {
             addButton.className = 'add-btn';
             addButton.onclick = addCommunity;
             addButton.textContent = '+';
-
             const communityList = document.getElementById('communityList');
             if (communityList && communityList.nextSibling) {
                 sidebarTop.insertBefore(addButton, communityList.nextSibling);
@@ -830,9 +772,6 @@ function updateAddCommunityButtonVisibility() {
 
 /**
  * Adds a new address to the selected community.
- * @async
- * @function addAddress
- * @returns {Promise<void>}
  */
 async function addAddress() {
     if (!selectedCommunity) return;
@@ -848,14 +787,11 @@ async function addAddress() {
                 body: JSON.stringify({ street }),
                 credentials: 'include'
             });
-
             if (!response.ok) {
                 throw new Error('Failed to add address');
             }
-
             const newAddress = await response.json();
             newAddress.isNew = true;
-
             if (!selectedCommunity.addresses) {
                 selectedCommunity.addresses = [];
             }
@@ -870,10 +806,7 @@ async function addAddress() {
 
 /**
  * Removes an address from the selected community.
- * @async
- * @function removeAddress
- * @param {string} addressId - The ID of the address to remove.
- * @returns {Promise<void>}
+ * @param {string} addressId - The ID of the address.
  */
 async function removeAddress(addressId) {
     if (!selectedCommunity) return;
@@ -887,11 +820,9 @@ async function removeAddress(addressId) {
                 },
                 credentials: 'include'
             });
-
             if (!response.ok) {
                 throw new Error('Failed to delete address');
             }
-
             selectedCommunity.addresses = selectedCommunity.addresses.filter(a => a.id !== addressId);
             renderAddresses();
         } catch (error) {
@@ -902,11 +833,8 @@ async function removeAddress(addressId) {
 }
 
 /**
- * Adds a new user ID to an address by prompting for username and player ID.
- * @async
- * @function addUserId
+ * Adds a new user ID to an address.
  * @param {string} addressId - The ID of the address.
- * @returns {Promise<void>}
  */
 async function addUserId(addressId) {
     const address = selectedCommunity.addresses.find(a => a.id === addressId);
@@ -924,7 +852,6 @@ async function addUserId(addressId) {
                 body: JSON.stringify({ username, playerId }),
                 credentials: 'include'
             });
-
             if (response.ok) {
                 const newUserId = await response.json();
                 if (!address.people) {
@@ -943,11 +870,8 @@ async function addUserId(addressId) {
 
 /**
  * Removes a user ID from an address.
- * @async
- * @function removeUserId
  * @param {string} addressId - The ID of the address.
- * @param {string} userIdId - The ID of the user to remove.
- * @returns {Promise<void>}
+ * @param {string} userIdId - The ID of the user ID.
  */
 async function removeUserId(addressId, userIdId) {
     const address = selectedCommunity.addresses.find(a => a.id === addressId);
@@ -962,7 +886,6 @@ async function removeUserId(addressId, userIdId) {
                 },
                 credentials: 'include'
             });
-
             if (response.ok) {
                 address.people = address.people.filter(u => u.id !== userIdId);
                 renderUserIds(address);
@@ -977,10 +900,7 @@ async function removeUserId(addressId, userIdId) {
 
 /**
  * Adds a new code to an address.
- * @async
- * @function addCode
  * @param {string} addressId - The ID of the address.
- * @returns {Promise<void>}
  */
 async function addCode(addressId) {
     const address = selectedCommunity.addresses.find(a => a.id === addressId);
@@ -999,7 +919,6 @@ async function addCode(addressId) {
                 body: JSON.stringify({ description, code, expiresAt: new Date(expiresAt).toISOString() }),
                 credentials: 'include'
             });
-
             if (response.ok) {
                 const newCode = await response.json();
                 if (!address.codes) {
@@ -1018,11 +937,8 @@ async function addCode(addressId) {
 
 /**
  * Removes a code from an address.
- * @async
- * @function removeCode
  * @param {string} addressId - The ID of the address.
  * @param {string} codeId - The ID of the code.
- * @returns {Promise<void>}
  */
 async function removeCode(addressId, codeId) {
     const address = selectedCommunity.addresses.find(a => a.id === addressId);
@@ -1037,7 +953,6 @@ async function removeCode(addressId, codeId) {
                 },
                 credentials: 'include'
             });
-
             if (response.ok) {
                 address.codes = address.codes.filter(c => c.id !== codeId);
                 renderCodes(address);
@@ -1052,20 +967,15 @@ async function removeCode(addressId, codeId) {
 
 /**
  * Updates the list of allowed users for the selected community.
- * @async
- * @function updateAllowedUsers
- * @returns {Promise<void>}
  */
 async function updateAllowedUsers() {
     if (!selectedCommunity) {
         alert('No community selected');
         return;
     }
-
     const allowedUsersInput = document.getElementById('allowedUsersInput').value;
     const newAllowedUsers = allowedUsersInput.split(',').map(user => user.trim()).filter(Boolean);
     const allowedUsersSet = new Set([...selectedCommunity.allowedUsers, ...newAllowedUsers]);
-
     try {
         const response = await fetch(`/api/communities/${selectedCommunity.id}/allowed-users`, {
             method: 'PUT',
@@ -1076,7 +986,6 @@ async function updateAllowedUsers() {
             body: JSON.stringify({ allowedUsers: Array.from(allowedUsersSet) }),
             credentials: 'include'
         });
-
         if (response.ok) {
             const data = await response.json();
             if (data.warning) {
@@ -1096,16 +1005,12 @@ async function updateAllowedUsers() {
 }
 
 /**
- * Renders the list of allowed users for the selected community in the UI.
- * @function renderAllowedUsers
- * @returns {void}
+ * Renders the list of allowed users for the selected community.
  */
 function renderAllowedUsers() {
     const allowedUsersDropdown = document.getElementById('allowedUsersDropdown');
     if (!allowedUsersDropdown) return;
-
     allowedUsersDropdown.innerHTML = '';
-
     if (selectedCommunity && selectedCommunity.allowedUsers) {
         selectedCommunity.allowedUsers.forEach(user => {
             const option = document.createElement('option');
@@ -1122,47 +1027,18 @@ function renderAllowedUsers() {
 
 /**
  * Removes the selected users from the allowed users list and updates the server.
- * @function removeSelectedUsers
- * @returns {void}
  */
 function removeSelectedUsers() {
     const allowedUsersDropdown = document.getElementById('allowedUsersDropdown');
     if (!allowedUsersDropdown) return;
-
     Array.from(allowedUsersDropdown.selectedOptions).forEach(option => {
         selectedCommunity.allowedUsers = selectedCommunity.allowedUsers.filter(u => u !== option.value);
     });
     updateAllowedUsers();
 }
 
-/* ------------------------------------------------------------------
-   NEW: Toggle the sidebar on mobile via hamburger button
-   AND toggle user menu on user-circle click
------------------------------------------------------------------- */
-document.addEventListener('DOMContentLoaded', function() {
-    // Sidebar toggle
-    const hamburgerBtn = document.getElementById('hamburgerBtn');
-    if (hamburgerBtn) {
-        hamburgerBtn.addEventListener('click', () => {
-            document.querySelector('.sidebar').classList.toggle('sidebar-open');
-        });
-    }
-
-    // User menu toggle
-    const userCircle = document.getElementById('userCircle');
-    const userMenu = document.getElementById('userMenu');
-    if (userCircle && userMenu) {
-        userCircle.addEventListener('click', (e) => {
-            e.stopPropagation(); // don't close immediately
-            userMenu.classList.toggle('show');
-        });
-        // Hide if clicking outside
-        document.addEventListener('click', (evt) => {
-            if (!userMenu.contains(evt.target) && evt.target !== userCircle) {
-                userMenu.classList.remove('show');
-            }
-        });
-    }
-});
-
+// Initialize CSRF token fetch (already handled in DOMContentLoaded above)
 document.addEventListener('DOMContentLoaded', fetchCsrfToken);
+
+// Fetch initial data
+fetchData();
