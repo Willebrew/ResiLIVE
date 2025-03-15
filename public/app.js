@@ -80,13 +80,22 @@ async function fetchCsrfToken() {
 }
 
 /**
- * Updates the username displayed in the UI.
+ * Updates the username displayed in the UI (for user circle + dropdown).
  * @param {string} username - The username to display.
  */
 function updateUserName(username) {
-    const userNameSpan = document.querySelector('#userName span');
-    if (userNameSpan) {
-        userNameSpan.textContent = username || 'Guest';
+    currentUsername = username || 'Guest';
+
+    // 1) Set the user circle initial
+    const userCircle = document.getElementById('userCircle');
+    if (userCircle) {
+        userCircle.textContent = currentUsername.charAt(0).toUpperCase() || '?';
+    }
+
+    // 2) Set the user menu text
+    const userFullName = document.getElementById('userFullName');
+    if (userFullName) {
+        userFullName.textContent = 'Welcome, ' + currentUsername;
     }
 }
 
@@ -102,7 +111,6 @@ async function checkLoginStatus() {
         if (response.ok) {
             const data = await response.json();
             currentUserId = data.userId;
-            currentUsername = data.username;
             updateUserName(data.username);
 
             isAdmin = data.role === 'admin' || data.role === 'superuser';
@@ -130,11 +138,6 @@ async function checkLoginStatus() {
         updateUserName('Logged Out');
     }
 }
-
-/**
- * Event listener for the logout button click event.
- * @event
- */
 document.addEventListener('DOMContentLoaded', checkLoginStatus);
 
 /**
@@ -207,8 +210,6 @@ async function toggleUserRole(userId) {
 
 /**
  * Renders the list of users in the UI.
- * Filters users with the role 'user' and creates a user item for each.
- * Each user item includes the username and a button to remove the user.
  * @function renderUsers
  * @returns {void}
  */
@@ -236,8 +237,7 @@ function renderUsers() {
 }
 
 /**
- * Adds a new user by sending a POST request to the server with the provided username and password.
- * If the user is successfully added, fetches the updated list of users and clears the input fields.
+ * Adds a new user by sending a POST request to the server.
  * @async
  * @function addUser
  * @returns {Promise<void>}
@@ -277,9 +277,7 @@ async function addUser() {
 }
 
 /**
- * Removes a user by sending a DELETE request to the server with the provided user ID.
- * Prompts the user for confirmation before proceeding with the deletion.
- * If the user is successfully removed, fetches the updated list of users.
+ * Removes a user by sending a DELETE request to the server.
  * @async
  * @function removeUser
  * @param {string} userId - The ID of the user to be removed.
@@ -395,8 +393,8 @@ async function logout() {
 
 /**
  * Changes the password for the currently logged-in user.
- * Prompts the user for the current password, new password, and confirmation of the new password.
- * Sends a POST request to the server to change the password.
+ * @async
+ * @function changePassword
  * @returns {Promise<void>}
  */
 async function changePassword() {
@@ -436,9 +434,6 @@ async function changePassword() {
         alert('An error occurred while changing password');
     }
 }
-
-// Add event listener for the "Change Password" button
-document.getElementById('changePasswordBtn').addEventListener('click', changePassword);
 
 // Add event listener for the "Show Logs" button
 document.addEventListener('DOMContentLoaded', function() {
@@ -557,8 +552,6 @@ function displayLogs(logs) {
     });
 }
 
-document.getElementById('logoutBtn').addEventListener('click', logout);
-
 /**
  * Renders the list of communities in the UI.
  * @function renderCommunities
@@ -569,9 +562,8 @@ function renderCommunities() {
     communityList.innerHTML = '';
     communities.forEach(community => {
         const li = document.createElement('li');
-        // The minus button for removing a community (admin only)
         li.innerHTML = `
-            ${isAdmin ? `<button class="remove-btn" onclick="removeCommunity('${community.id}')">-</button>` : ''}
+            ${isAdmin ? `<button class="remove-btn" onclick="removeCommunity('${community.id}')">Remove</button>` : ''}
             <span>${community.name}</span>
         `;
         li.onclick = (event) => {
@@ -623,19 +615,19 @@ function renderAddresses() {
 
             li.innerHTML = `
                 <div class="address-main">
-                    <button class="remove-btn" onclick="removeAddress('${address.id}')">-</button>
+                    <button class="remove-btn" onclick="removeAddress('${address.id}')">Remove</button>
                     <span class="address-text" onclick="toggleAddressDetails('${address.id}')">${address.street}</span>
                 </div>
                 <div class="address-details" id="details-${address.id}">
                     <div class="user-ids">
                         <h4>User IDs:</h4>
                         <ul class="user-id-list"></ul>
-                        <button class="add-btn" onclick="addUserId('${address.id}')">+</button>
+                        <button class="add-btn" onclick="addUserId('${address.id}')">Add User ID</button>
                     </div>
                     <div class="codes">
                         <h4>Codes:</h4>
                         <ul class="code-list"></ul>
-                        <button class="add-btn" onclick="addCode('${address.id}')">+</button>
+                        <button class="add-btn" onclick="addCode('${address.id}')">Add Code</button>
                     </div>
                 </div>
             `;
@@ -700,7 +692,7 @@ function renderCodes(address) {
 }
 
 /**
- * Adds a new community by prompting the user for a name and sending a POST request to the server.
+ * Adds a new community by prompting the user for a name and sending a POST request.
  * @async
  * @function addCommunity
  * @returns {Promise<void>}
@@ -758,7 +750,7 @@ async function addCommunity() {
 }
 
 /**
- * Removes a community by its ID after user confirmation and sends a DELETE request to the server.
+ * Removes a community by its ID after user confirmation.
  * @async
  * @function removeCommunity
  * @param {string} communityId - The ID of the community to remove.
@@ -808,8 +800,6 @@ async function removeCommunity(communityId) {
 
 /**
  * Updates the visibility of the "Add Community" button based on the number of communities.
- * If the number of communities is less than the maximum allowed, the button is displayed.
- * If the number of communities is equal to or greater than the maximum allowed, the button is removed.
  * @function updateAddCommunityButtonVisibility
  * @returns {void}
  */
@@ -839,7 +829,7 @@ function updateAddCommunityButtonVisibility() {
 }
 
 /**
- * Adds a new address to the selected community by prompting the user for a street name and sending a POST request to the server.
+ * Adds a new address to the selected community.
  * @async
  * @function addAddress
  * @returns {Promise<void>}
@@ -879,7 +869,7 @@ async function addAddress() {
 }
 
 /**
- * Removes an address from the selected community by its ID after user confirmation and sends a DELETE request to the server.
+ * Removes an address from the selected community.
  * @async
  * @function removeAddress
  * @param {string} addressId - The ID of the address to remove.
@@ -912,10 +902,10 @@ async function removeAddress(addressId) {
 }
 
 /**
- * Adds a new user ID to an address by prompting the user for a username and player ID and sending a POST request to the server.
+ * Adds a new user ID to an address by prompting for username and player ID.
  * @async
  * @function addUserId
- * @param {string} addressId - The ID of the address to add the user ID to.
+ * @param {string} addressId - The ID of the address.
  * @returns {Promise<void>}
  */
 async function addUserId(addressId) {
@@ -952,11 +942,11 @@ async function addUserId(addressId) {
 }
 
 /**
- * Removes a user ID from an address by its ID after user confirmation and sends a DELETE request to the server.
+ * Removes a user ID from an address.
  * @async
  * @function removeUserId
- * @param {string} addressId - The ID of the address to remove the user ID from.
- * @param {string} userIdId - The ID of the user ID to remove.
+ * @param {string} addressId - The ID of the address.
+ * @param {string} userIdId - The ID of the user to remove.
  * @returns {Promise<void>}
  */
 async function removeUserId(addressId, userIdId) {
@@ -986,10 +976,10 @@ async function removeUserId(addressId, userIdId) {
 }
 
 /**
- * Adds a new code to an address by prompting the user for a description, code, and expiration date and sending a POST request to the server.
+ * Adds a new code to an address.
  * @async
  * @function addCode
- * @param {string} addressId - The ID of the address to add the code to.
+ * @param {string} addressId - The ID of the address.
  * @returns {Promise<void>}
  */
 async function addCode(addressId) {
@@ -1027,11 +1017,11 @@ async function addCode(addressId) {
 }
 
 /**
- * Removes a code from an address by its ID after user confirmation and sends a DELETE request to the server.
+ * Removes a code from an address.
  * @async
  * @function removeCode
- * @param {string} addressId - The ID of the address to remove the code from.
- * @param {string} codeId - The ID of the code to remove.
+ * @param {string} addressId - The ID of the address.
+ * @param {string} codeId - The ID of the code.
  * @returns {Promise<void>}
  */
 async function removeCode(addressId, codeId) {
@@ -1061,38 +1051,7 @@ async function removeCode(addressId, codeId) {
 }
 
 /**
- * Checks if a user exists in the system.
- * @async
- * @function checkUserExists
- * @param {string} username - The username to check.
- * @returns {Promise<boolean>} - True if the user exists, false otherwise.
- */
-async function checkUserExists(username) {
-    try {
-        const response = await fetch(`/api/users/exists/${encodeURIComponent(username)}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
-            },
-            credentials: 'include'
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            return data.exists;
-        } else {
-            console.error('Failed to check user existence:', response.statusText);
-            return false;
-        }
-    } catch (error) {
-        console.error('Error checking user existence:', error);
-        return false;
-    }
-}
-
-/**
- * Updates the list of allowed users for the selected community by sending a PUT request to the server.
+ * Updates the list of allowed users for the selected community.
  * @async
  * @function updateAllowedUsers
  * @returns {Promise<void>}
@@ -1178,17 +1137,32 @@ function removeSelectedUsers() {
 
 /* ------------------------------------------------------------------
    NEW: Toggle the sidebar on mobile via hamburger button
+   AND toggle user menu on user-circle click
 ------------------------------------------------------------------ */
 document.addEventListener('DOMContentLoaded', function() {
+    // Sidebar toggle
     const hamburgerBtn = document.getElementById('hamburgerBtn');
     if (hamburgerBtn) {
         hamburgerBtn.addEventListener('click', () => {
             document.querySelector('.sidebar').classList.toggle('sidebar-open');
         });
     }
+
+    // User menu toggle
+    const userCircle = document.getElementById('userCircle');
+    const userMenu = document.getElementById('userMenu');
+    if (userCircle && userMenu) {
+        userCircle.addEventListener('click', (e) => {
+            e.stopPropagation(); // don't close immediately
+            userMenu.classList.toggle('show');
+        });
+        // Hide if clicking outside
+        document.addEventListener('click', (evt) => {
+            if (!userMenu.contains(evt.target) && evt.target !== userCircle) {
+                userMenu.classList.remove('show');
+            }
+        });
+    }
 });
 
 document.addEventListener('DOMContentLoaded', fetchCsrfToken);
-document.querySelector('main .add-btn').addEventListener('click', addAddress);
-
-fetchData();
