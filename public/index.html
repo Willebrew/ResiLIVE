@@ -1,33 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>ResiLIVE</title>
-    <link rel="icon" type="image/png" href="icon.png">
-    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="icon.png" />
+    <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<div class="container">
-    <aside class="sidebar">
-        <div class="sidebar-top">
+<!-- Top Navigation / Header -->
+<header class="topbar">
+    <div class="topbar-left">
+        <!-- Hamburger button for mobile toggling of sidebar -->
+        <button class="hamburger" id="hamburgerBtn">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <div class="logo">
             <h1>ResiLIVE</h1>
             <p class="subtitle">a product of JAW Development</p>
+        </div>
+    </div>
+
+    <div class="topbar-right">
+        <!-- Buttons that used to be in sidebar -->
+        <button id="showUsersBtn" class="topnav-btn">
+            <span class="log-btn-icon">👤</span>
+            <span class="log-btn-text">Users</span>
+        </button>
+        <button id="showLogsBtn" class="topnav-btn">
+            <span class="log-btn-icon">📋</span>
+            <span class="log-btn-text">Logs</span>
+        </button>
+
+        <!-- Logged-in user info + actions -->
+        <div class="user-section">
+            <p id="userName">Welcome, <span></span></p>
+            <button id="logoutBtn" class="logout-btn">Logout</button>
+            <button id="changePasswordBtn" class="change-password-btn">Change Password</button>
+        </div>
+    </div>
+</header>
+
+<!-- Main Container: Sidebar + Main Content -->
+<div class="container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-top">
             <h2>Communities</h2>
             <ul id="communityList"></ul>
+            <!-- The original ID="12" button remains, so app.js won't break -->
             <button class="add-btn" id="12" onclick="addCommunity()">+</button>
         </div>
 
         <div class="sidebar-bottom">
-            <button id="showUsersBtn" class="user-btn">
-                <span class="log-btn-icon">🔒</span>
-                <span class="log-btn-text">Edit Users</span>
-            </button>
-            <button id="showLogsBtn" class="log-btn">
-                <span class="log-btn-icon">📋</span>
-                <span class="log-btn-text">Show Logs</span>
-            </button>
-
+            <!-- Allowed Users management block (admin only) -->
             <div id="allowedUsersManagement">
                 <h3>Allowed Users</h3>
                 <select id="allowedUsersDropdown" multiple></select>
@@ -37,38 +65,17 @@
                     <button class="remove-btn-user" onclick="removeSelectedUsers()">-</button>
                 </div>
             </div>
-
-            <div class="user-section">
-                <p id="userName">Welcome, <span></span></p>
-                <button id="logoutBtn" class="logout-btn">Logout</button>
-                <button id="changePasswordBtn" class="change-password-btn">Change Password</button>
-            </div>
         </div>
     </aside>
+
+    <!-- Main Content -->
     <main>
-        <div id="logPopup" class="popup">
-            <div class="popup-content">
-                <h2 id="logPopupTitle"></h2>
-                <div id="logContent"></div>
-                <button class="close-btn-popup" onclick="closeLogPopup()">Close</button>
-            </div>
-        </div>
-        <div id="usersPopup" class="popup">
-            <div class="popup-content">
-                <h2>User Management</h2>
-                <div id="usersList"></div>
-                <div id="addUserForm">
-                    <input type="text" id="newUsername" placeholder="Username">
-                    <input type="password" id="newPassword" placeholder="Password">
-                    <button class="add-btn2" onclick="addUser()">+</button>
-                </div>
-                <button class="close-btn-popup" onclick="closeUsersPopup()">Close</button>
-            </div>
-        </div>
         <h2 id="communityName">Please create a Community</h2>
         <h3>Addresses:</h3>
         <ul id="addressList"></ul>
         <button id="addAddressBtn" class="add-btn">+</button>
+
+        <!-- Address details container (shown/hidden in app.js) -->
         <div id="addressDetails" style="display: none;">
             <h3 id="selectedAddress"></h3>
             <h4>User IDs:</h4>
@@ -81,6 +88,31 @@
         </div>
     </main>
 </div>
+
+<!-- Log Popup -->
+<div id="logPopup" class="popup">
+    <div class="popup-content">
+        <h2 id="logPopupTitle"></h2>
+        <div id="logContent"></div>
+        <button class="close-btn-popup" onclick="closeLogPopup()">Close</button>
+    </div>
+</div>
+
+<!-- User Management Popup -->
+<div id="usersPopup" class="popup">
+    <div class="popup-content">
+        <h2>User Management</h2>
+        <div id="usersList"></div>
+        <div id="addUserForm">
+            <input type="text" id="newUsername" placeholder="Username">
+            <input type="password" id="newPassword" placeholder="Password">
+            <button class="add-btn2" onclick="addUser()">+</button>
+        </div>
+        <button class="close-btn-popup" onclick="closeUsersPopup()">Close</button>
+    </div>
+</div>
+
+<!-- Main JavaScript -->
 <script src="app.js"></script>
 </body>
 </html>
