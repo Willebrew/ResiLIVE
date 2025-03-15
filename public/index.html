@@ -24,7 +24,7 @@
     </div>
 
     <div class="topbar-right">
-        <!-- Buttons that used to be in sidebar -->
+        <!-- "Edit Users" and "Show Logs" -->
         <button id="showUsersBtn" class="topnav-btn">
             <span class="log-btn-icon">👤</span>
             <span class="log-btn-text">Users</span>
@@ -34,11 +34,15 @@
             <span class="log-btn-text">Logs</span>
         </button>
 
-        <!-- Logged-in user info + actions -->
-        <div class="user-section">
-            <p id="userName">Welcome, <span></span></p>
-            <button id="logoutBtn" class="logout-btn">Logout</button>
-            <button id="changePasswordBtn" class="change-password-btn">Change Password</button>
+        <!-- User Menu (circle button + dropdown) -->
+        <div class="user-menu-wrapper">
+            <!-- The circle shows the user's first initial, set by JS -->
+            <button class="user-circle" id="userCircle">?</button>
+            <div class="user-menu" id="userMenu">
+                <p class="user-menu-name" id="userFullName">Welcome, Guest</p>
+                <button id="changePasswordBtn" class="user-menu-item">Change Password</button>
+                <button id="logoutBtn" class="user-menu-item logout">Logout</button>
+            </div>
         </div>
     </div>
 </header>
@@ -61,8 +65,8 @@
                 <select id="allowedUsersDropdown" multiple></select>
                 <input type="text" id="allowedUsersInput" placeholder="Add usernames here">
                 <div class="button-group">
-                    <button class="add-btn" onclick="updateAllowedUsers()">+</button>
-                    <button class="remove-btn-user" onclick="removeSelectedUsers()">-</button>
+                    <button class="add-btn" onclick="updateAllowedUsers()">Add</button>
+                    <button class="remove-btn-user" onclick="removeSelectedUsers()">Remove</button>
                 </div>
             </div>
         </div>
@@ -80,11 +84,11 @@
             <h3 id="selectedAddress"></h3>
             <h4>User IDs:</h4>
             <ul id="userIdList"></ul>
-            <button class="add-btn" onclick="addUserId()">+</button>
+            <button class="add-btn" onclick="addUserId()">Add User ID</button>
 
             <h4>Codes:</h4>
             <ul id="codeList"></ul>
-            <button class="add-btn" onclick="addCode()">+</button>
+            <button class="add-btn" onclick="addCode()">Add Code</button>
         </div>
     </main>
 </div>
@@ -106,7 +110,7 @@
         <div id="addUserForm">
             <input type="text" id="newUsername" placeholder="Username">
             <input type="password" id="newPassword" placeholder="Password">
-            <button class="add-btn2" onclick="addUser()">+</button>
+            <button class="add-btn2" onclick="addUser()">Add</button>
         </div>
         <button class="close-btn-popup" onclick="closeUsersPopup()">Close</button>
     </div>
