@@ -1,29 +1,48 @@
-/*******************************************************
-  DARK THEME & GLOBAL SETTINGS
-*******************************************************/
+/********************************************************
+  COLOR & THEME VARIABLES
+*********************************************************/
 :root {
-    --color-bg: #1a1a1a;
-    --color-sidebar: #252525;
-    --color-card: #3a3a3a;
-    --color-accent: #4a90e2;
-    --color-danger: #ff4136;
-    --color-success: #2ecc71;
-    --color-text: #ffffff;
-    --color-muted: #888;
-    --transition-speed: 0.3s;
-    --radius: 6px;
-    --sidebar-width: 220px;
+    --color-bg: #000000;           /* page background */
+    --color-border: #181818;       /* borders */
+    --color-card: #0A0A0A;         /* addresses, communities, etc. */
+    --color-text: #ffffff;         /* default text */
+    --color-text-inverse: #000000; /* for light buttons */
+
+    /* Button colors */
+    --color-btn-primary-bg: #ffffff;  /* white buttons for "Users" & "Logs" */
+    --color-btn-primary-text: #000000;/* black text */
+
+    --color-btn-remove-bg: #FF3B30;   /* red remove button */
+    --color-btn-remove-text: #ffffff;
+
+    --color-btn-add-bg: #32D74B;      /* green add button */
+    --color-btn-add-text: #000000;
+
+    /* Sizing & shape */
+    --radius: 10px;       /* shared corner radius for cards */
+    --btn-radius: 20px;   /* pill-shaped buttons */
+
+    /* Layout constants */
     --topbar-height: 60px;
+    --sidebar-width: 220px;
 }
 
+/********************************************************
+  GLOBAL RESETS
+*********************************************************/
 html, body {
-    height: 100%;
     margin: 0;
     padding: 0;
     background-color: var(--color-bg);
     color: var(--color-text);
     font-family: Arial, sans-serif;
-    overflow: hidden; /* No full-page scroll */
+    height: 100%;
+    overflow: hidden; /* no full-page scrolling; only side/main scroll */
+    box-sizing: border-box;
+}
+
+*, *::before, *::after {
+    box-sizing: inherit;
 }
 
 h1, h2, h3, h4, p {
@@ -31,17 +50,17 @@ h1, h2, h3, h4, p {
     padding: 0;
 }
 
-/*******************************************************
-  TOP BAR
-*******************************************************/
+/********************************************************
+  LAYOUT: TOPBAR
+*********************************************************/
 .topbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: var(--color-sidebar);
-    padding: 10px 20px;
     height: var(--topbar-height);
-    box-sizing: border-box;
+    background-color: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+    padding: 0 20px;
 }
 
 .topbar-left {
@@ -51,7 +70,8 @@ h1, h2, h3, h4, p {
 }
 
 .logo h1 {
-    font-size: 1.6em;
+    font-size: 1.5em;
+    color: var(--color-text);
 }
 
 .subtitle {
@@ -65,9 +85,11 @@ h1, h2, h3, h4, p {
     gap: 15px;
 }
 
-/* Hamburger (mobile) */
+/********************************************************
+  HAMBURGER (MOBILE)
+*********************************************************/
 .hamburger {
-    display: none; /* hidden on desktop by default */
+    display: none; /* hidden on larger screens */
     flex-direction: column;
     justify-content: center;
     align-items: center;
@@ -82,7 +104,7 @@ h1, h2, h3, h4, p {
     height: 3px;
     background: var(--color-text);
     margin: 4px 0;
-    transition: all var(--transition-speed);
+    transition: 0.3s;
 }
 
 @media (max-width: 900px) {
@@ -91,9 +113,27 @@ h1, h2, h3, h4, p {
     }
 }
 
-/*******************************************************
-  USER MENU (top-right circle + dropdown)
-*******************************************************/
+/********************************************************
+  USER / LOGS BUTTONS (WHITE W/ BLACK TEXT)
+*********************************************************/
+.topnav-btn {
+    background-color: var(--color-btn-primary-bg);
+    color: var(--color-btn-primary-text);
+    border: none;
+    border-radius: var(--btn-radius);
+    cursor: pointer;
+    padding: 8px 16px;
+    font-size: 0.9em;
+    transition: background-color 0.3s;
+}
+
+.topnav-btn:hover {
+    background-color: #e8e8e8; /* slightly darker on hover */
+}
+
+/********************************************************
+  USER MENU (CIRCLE + DROPDOWN)
+*********************************************************/
 .user-menu-wrapper {
     position: relative;
 }
@@ -102,28 +142,30 @@ h1, h2, h3, h4, p {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background-color: var(--color-accent);
-    color: #fff;
+    background-color: var(--color-btn-primary-bg);
+    color: var(--color-btn-primary-text);
     font-weight: bold;
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 1em;
 }
 
 .user-menu {
     position: absolute;
     top: 50px;
     right: 0;
-    background-color: #2c2c2c;
-    padding: 10px;
-    border-radius: 8px;
+    background-color: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
     box-shadow: 0 2px 10px rgba(0,0,0,0.5);
     display: none;
     flex-direction: column;
     gap: 10px;
     min-width: 160px;
+    padding: 10px;
 }
 
 .user-menu.show {
@@ -131,47 +173,51 @@ h1, h2, h3, h4, p {
 }
 
 .user-menu-name {
-    margin: 0;
-    font-size: 14px;
+    font-size: 0.9em;
     color: var(--color-text);
 }
 
 .user-menu-item {
     background-color: var(--color-card);
-    border: none;
-    border-radius: 4px;
-    padding: 6px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--btn-radius);
+    padding: 6px 12px;
     color: var(--color-text);
     cursor: pointer;
-    font-size: 14px;
-    text-align: left;
-    width: 100%;
+    font-size: 0.85em;
+    text-align: center;
 }
 
 .user-menu-item.logout {
-    background-color: var(--color-danger);
+    background-color: var(--color-btn-remove-bg);
+    color: var(--color-btn-remove-text);
+    border: none;
 }
 
 .user-menu-item:hover {
-    background-color: #4a4a4a;
+    opacity: 0.8;
 }
 
-/*******************************************************
-  LAYOUT CONTAINER (SIDEBAR + MAIN)
-*******************************************************/
+/********************************************************
+  CONTAINER (SIDEBAR + MAIN)
+*********************************************************/
 .container {
     display: flex;
     height: calc(100% - var(--topbar-height));
-    transition: margin-left var(--transition-speed) ease;
     position: relative;
+    transition: margin-left 0.3s;
 }
 
+/********************************************************
+  SIDEBAR
+*********************************************************/
 .sidebar {
     width: var(--sidebar-width);
-    background-color: var(--color-sidebar);
+    background-color: var(--color-bg);
+    border-right: 1px solid var(--color-border);
     padding: 20px;
-    overflow-y: auto; /* scroll only inside sidebar */
-    transition: transform var(--transition-speed) ease;
+    overflow-y: auto; /* scroll in sidebar */
+    transition: transform 0.3s;
 }
 
 @media (max-width: 900px) {
@@ -189,112 +235,125 @@ h1, h2, h3, h4, p {
 }
 
 .sidebar-top h2 {
-    margin-top: 0;
-    font-size: 1.2em;
-}
-
-.sidebar-top ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+    font-size: 1.1em;
+    margin-bottom: 10px;
+    color: var(--color-text);
 }
 
 .sidebar-bottom {
     margin-top: 20px;
 }
 
-/*******************************************************
-  COMMUNITY LIST & BUTTONS
-*******************************************************/
+/********************************************************
+  COMMUNITIES LIST
+*********************************************************/
+#communityList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
 #communityList li {
     background-color: var(--color-card);
+    border: 1px solid var(--color-border);
     margin-bottom: 10px;
-    padding: 8px 15px;
-    border-radius: 20px;
+    border-radius: var(--radius);
     display: flex;
     align-items: center;
+    padding: 8px 15px;
     cursor: pointer;
 }
 
 #communityList li.active {
-    background-color: #4a4a4a;
+    outline: 1px solid #666;
 }
 
-/* Buttons: nicer "Add" & "Remove" */
+#communityList li:hover {
+    background-color: #111111;
+}
+
+/********************************************************
+  ADD / REMOVE BUTTONS (FOR COMMUNITIES, ETC.)
+*********************************************************/
 .add-btn,
 .remove-btn,
 .remove-btn-user {
     border: none;
-    border-radius: 4px;
-    padding: 6px 12px;
-    font-size: 14px;
+    border-radius: var(--btn-radius);
     cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    font-size: 0.85em;
+    padding: 6px 12px;
     margin-right: 5px;
+    transition: opacity 0.2s;
 }
 
 .add-btn {
-    background-color: var(--color-success);
-    color: #fff;
+    background-color: var(--color-btn-add-bg);
+    color: var(--color-btn-add-text);
 }
 
 .remove-btn,
 .remove-btn-user {
-    background-color: var(--color-danger);
-    color: #fff;
+    background-color: var(--color-btn-remove-bg);
+    color: var(--color-btn-remove-text);
 }
 
-/* The smaller plus button inside forms, if needed */
+.add-btn:hover,
+.remove-btn:hover,
+.remove-btn-user:hover {
+    opacity: 0.8;
+}
+
+/* The special "add-btn2" in the user form */
 .add-btn2 {
-    background-color: var(--color-success);
-    color: #fff;
+    background-color: var(--color-btn-add-bg);
+    color: var(--color-btn-add-text);
     border: none;
-    border-radius: 4px;
+    border-radius: var(--btn-radius);
     padding: 6px 12px;
-    font-size: 14px;
+    font-size: 0.85em;
     cursor: pointer;
     margin: 10px auto 0;
     display: block;
 }
 
-/*******************************************************
-  ALLOWED USERS
-*******************************************************/
+/********************************************************
+  ALLOWED USERS SECTION
+*********************************************************/
 #allowedUsersManagement {
-    background-color: #2c2c2c;
-    padding: 10px;
+    background-color: var(--color-card);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius);
+    padding: 10px;
+    color: var(--color-text);
 }
 
 #allowedUsersManagement h3 {
     margin-bottom: 10px;
-    color: #fff;
+    font-size: 1em;
 }
 
 #allowedUsersDropdown {
-    appearance: none;
-    background-color: var(--color-card);
-    border: 1px solid #444;
-    border-radius: 4px;
-    padding: 8px;
-    color: var(--color-text);
     width: 100%;
     min-height: 60px;
+    border: 1px solid var(--color-border);
+    background-color: #111111;
+    border-radius: var(--radius);
+    color: var(--color-text);
+    padding: 6px;
     margin-bottom: 10px;
-    font-size: 14px;
+    font-size: 0.9em;
 }
 
 #allowedUsersInput {
-    background-color: var(--color-card);
-    border: 1px solid #444;
-    border-radius: 4px;
-    padding: 8px;
-    color: var(--color-text);
     width: 100%;
+    border: 1px solid var(--color-border);
+    background-color: #111111;
+    border-radius: var(--radius);
+    color: var(--color-text);
+    padding: 6px;
     margin-bottom: 10px;
-    font-size: 14px;
+    font-size: 0.9em;
 }
 
 .button-group {
@@ -302,23 +361,25 @@ h1, h2, h3, h4, p {
     justify-content: space-between;
 }
 
-/*******************************************************
+/********************************************************
   MAIN CONTENT
-*******************************************************/
+*********************************************************/
 main {
     flex-grow: 1;
-    overflow-y: auto; /* scroll only inside main content */
+    overflow-y: auto; /* scroll in main */
     padding: 20px;
     box-sizing: border-box;
 }
 
 #communityName {
-    margin-top: 0;
+    font-size: 1.2em;
+    margin-bottom: 10px;
+    color: var(--color-text);
 }
 
 h3 {
-    font-size: 1em;
     margin: 10px 0;
+    color: var(--color-text);
 }
 
 #addressList {
@@ -329,16 +390,21 @@ h3 {
 
 #addressList li {
     background-color: var(--color-card);
+    border: 1px solid var(--color-border);
     margin-bottom: 10px;
-    border-radius: 20px;
+    border-radius: var(--radius);
     animation: fadeIn 0.3s ease-out;
+}
+
+#addressList li:hover {
+    background-color: #111111;
 }
 
 .address-main {
     display: flex;
     align-items: center;
     padding: 8px 15px;
-    border-radius: 20px;
+    border-radius: var(--radius);
 }
 
 .address-text {
@@ -364,47 +430,36 @@ h3 {
     margin-top: 10px;
 }
 
-.user-ids,
-.codes {
+.user-ids, .codes {
     margin-top: 10px;
     margin-bottom: 15px;
     padding-left: 20px;
 }
 
-.user-id-list,
-.code-list {
+.user-id-list, .code-list {
     padding-left: 10px;
     margin-bottom: 10px;
     max-height: 200px;
     overflow-y: auto;
 }
 
-.user-id-list li,
-.code-list li {
-    background-color: #4a4a4a;
+.user-id-list li, .code-list li {
+    background-color: #111111;
+    border: 1px solid var(--color-border);
     margin-bottom: 5px;
     padding: 5px 10px;
-    border-radius: 10px;
+    border-radius: var(--radius);
     display: flex;
     align-items: center;
 }
 
-.user-id-list li span,
-.code-list li span {
+.user-id-list li span, .code-list li span {
     margin-left: 10px;
 }
 
-/*******************************************************
-  ANIMATIONS
-*******************************************************/
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/*******************************************************
+/********************************************************
   POPUPS / MODALS
-*******************************************************/
+*********************************************************/
 .popup {
     display: none;
     position: fixed;
@@ -417,35 +472,34 @@ h3 {
 }
 
 .popup-content {
-    background-color: #2c2c2c;
+    background-color: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
     margin: 5% auto;
     padding: 20px;
-    border: 1px solid #888;
     width: 90%;
     max-width: 600px;
-    border-radius: var(--radius);
     color: var(--color-text);
 }
 
 .popup-content h2 {
     margin-top: 0;
-    color: var(--color-accent);
 }
 
 .close-btn-popup {
-    background-color: #888;
-    color: #fff;
+    background-color: #555555;
+    color: #ffffff;
     margin-top: 10px;
-    width: 50px;
-    height: 50px;
-    font-size: 15px;
-    border-radius: 50%;
     border: none;
+    border-radius: var(--btn-radius);
+    width: 60px;
+    height: 34px;
+    font-size: 0.85em;
     cursor: pointer;
 }
 
 .close-btn-popup:hover {
-    background-color: #5a5a5a;
+    opacity: 0.8;
 }
 
 /* Log content */
@@ -453,31 +507,35 @@ h3 {
     max-height: 300px;
     overflow-y: auto;
     margin-bottom: 20px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background-color: #111111;
+    padding: 10px;
 }
 
 .log-entry {
-    background-color: var(--color-card);
+    background-color: transparent;
     margin-bottom: 10px;
-    padding: 10px;
     border-radius: var(--radius);
 }
 
 .log-entry .timestamp {
-    color: var(--color-muted);
+    color: #bbb;
     font-size: 0.8em;
 }
 
 .log-entry .player {
     font-weight: bold;
+    color: var(--color-text);
 }
 
 .log-entry .action {
-    color: var(--color-success);
+    color: var(--color-btn-add-bg);
 }
 
-/*******************************************************
+/********************************************************
   USER MANAGEMENT POPUP
-*******************************************************/
+*********************************************************/
 #usersList {
     max-height: 300px;
     overflow-y: auto;
@@ -488,7 +546,8 @@ h3 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: var(--color-card);
+    background-color: #111111;
+    border: 1px solid var(--color-border);
     margin-bottom: 10px;
     padding: 10px 15px;
     border-radius: var(--radius);
@@ -505,23 +564,23 @@ h3 {
 }
 
 .role-btn {
-    background-color: var(--color-accent);
-    color: white;
+    background-color: var(--color-btn-primary-bg);
+    color: var(--color-btn-primary-text);
     border: none;
-    padding: 5px 10px;
-    border-radius: 50%;
+    border-radius: var(--btn-radius);
     cursor: pointer;
     font-size: 16px;
-    width: 30px;
-    height: 30px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color var(--transition-speed);
+    transition: opacity 0.3s;
 }
 
 .role-btn.admin {
     background-color: #f1c40f;
+    color: #000;
 }
 
 .role-btn:hover {
@@ -529,10 +588,16 @@ h3 {
 }
 
 .remove-btn {
-    background-color: var(--color-danger);
-    color: #fff;
+    background-color: var(--color-btn-remove-bg);
+    color: var(--color-btn-remove-text);
+    border-radius: var(--btn-radius);
+    border: none;
+    cursor: pointer;
+    padding: 6px 12px;
+    font-size: 0.85em;
 }
 
+/* Add user form */
 #addUserForm {
     display: flex;
     flex-direction: column;
@@ -541,32 +606,29 @@ h3 {
 }
 
 #addUserForm input {
-    padding: 10px;
-    border: none;
+    padding: 8px;
+    border: 1px solid var(--color-border);
     border-radius: var(--radius);
-    background-color: var(--color-card);
+    background-color: #111111;
     color: var(--color-text);
-    font-size: 14px;
+    font-size: 0.9em;
 }
 
-.add-btn2 {
-    border: none;
-    border-radius: 4px;
-    padding: 6px 12px;
-    font-size: 14px;
-    cursor: pointer;
-    background-color: var(--color-success);
-    color: #fff;
+/********************************************************
+  ANIMATIONS
+*********************************************************/
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-/*******************************************************
-  RESPONSIVE SIDEBAR ADJUSTMENTS
-*******************************************************/
+/********************************************************
+  RESPONSIVE ADJUSTMENTS
+*********************************************************/
 @media (max-width: 900px) {
     .topbar-right {
         gap: 10px;
     }
-
     .container {
         margin-left: 0;
     }
