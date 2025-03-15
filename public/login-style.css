@@ -7,102 +7,45 @@
     --color-text: #ffffff;         /* Default text color */
     --radius: 10px;                /* Card and input border radius */
     --btn-radius: 20px;            /* Pill-shaped button radius */
-
-    --gradient-blur: 120px;        /* How soft/glowy the rainbow swirl is */
-    --gradient-opacity: 0.8;       /* Overall brightness of the swirl */
-    --swirl-duration: 30s;         /* How long it takes the gradient to do a full rotation */
-    --morph-duration: 20s;         /* How long one full morph cycle takes */
+    --blob-size: 800px;            /* Size of the gradient blob */
+    --gradient-blur: 120px;        /* Blur level for softness */
+    --gradient-opacity: 0.8;       /* Opacity of the gradient */
+    --swirl-duration: 30s;         /* Duration for one full rotation */
 }
 
-/* Reset */
+/* Basic reset */
 * {
     box-sizing: border-box;
 }
 
-/*
-   1) body::before -> the swirling rainbow gradient
-*/
+/* Swirling rainbow gradient background */
 body::before {
     content: "";
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-
-    /* Conic rainbow gradient (big enough to cover the screen) */
-    background: conic-gradient(
-            red,
-            orange,
-            yellow,
-            green,
-            blue,
-            indigo,
-            violet,
-            red
-    );
-
-    /* Make it glow */
+    top: 50%;
+    left: 50%;
+    width: var(--blob-size);
+    height: var(--blob-size);
+    background: conic-gradient(red, orange, yellow, green, blue, indigo, violet, red);
     filter: blur(var(--gradient-blur));
+    transform: translate(-50%, -50%);
     opacity: var(--gradient-opacity);
-
-    /* We rotate this entire layer to make the rainbow swirl */
+    border-radius: 50%;
     animation: swirl var(--swirl-duration) linear infinite;
-
-    z-index: -2; /* behind everything */
+    z-index: -1;
 }
 
-/*
-   2) body::after -> black overlay with a "window" that morphs shape,
-      revealing the swirling gradient underneath
-*/
-body::after {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-
-    /* Solid black overlay */
-    background: #000;
-
-    /* The "window" is created by a clip-path that changes over time */
-    clip-path: circle(25% at 50% 50%);
-    animation: morph var(--morph-duration) ease-in-out infinite;
-
-    z-index: -1; /* above the swirl, but behind your main content */
-}
-
-/* Keyframe for swirling the gradient (body::before) */
+/* Keyframes for smooth, continuous rotation */
 @keyframes swirl {
-    0% {
-        transform: rotate(0deg);
+    from {
+        transform: translate(-50%, -50%) rotate(0deg);
     }
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-/* Keyframe for morphing the shape (body::after) */
-@keyframes morph {
-    0% {
-        clip-path: circle(25% at 50% 50%);
-    }
-    33% {
-        clip-path: ellipse(27% 30% at 50% 50%);
-    }
-    66% {
-        clip-path: circle(29% at 50% 50%);
-    }
-    100% {
-        clip-path: circle(25% at 50% 50%);
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
     }
 }
 
-/*
-   Main page styles
-*/
+/* Page styles */
 body {
     margin: 0;
     padding: 0;
