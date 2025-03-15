@@ -292,6 +292,14 @@ h1, h2, h3, h4, p {
     background-color: #111111;
 }
 
+#communityList li span {
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /********************************************************
   ADD / REMOVE BUTTONS (FOR COMMUNITIES, ETC.)
 *********************************************************/
