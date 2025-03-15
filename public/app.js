@@ -28,7 +28,6 @@ let isAdmin = false;
  */
 let users = [];
 
-
 /**
  * Variable to store the CSRF token.
  * @type {string}
@@ -111,7 +110,10 @@ async function checkLoginStatus() {
             if (isAdmin) {
                 document.getElementById('allowedUsersManagement').style.display = 'block';
             } else {
-                document.getElementById('allowedUsersManagement').remove();
+                const allowedUsersManagement = document.getElementById('allowedUsersManagement');
+                if (allowedUsersManagement) {
+                    allowedUsersManagement.remove();
+                }
                 const addCommunityBtn = document.getElementById('12');
                 const showUsersBtn = document.getElementById('showUsersBtn');
                 if (addCommunityBtn) addCommunityBtn.remove();
@@ -220,8 +222,8 @@ function renderUsers() {
             userElement.innerHTML = `
                 <span>${user.username}</span>
                 <div class="user-controls">
-                    <button onclick="toggleUserRole('${user.id}')" 
-                            class="role-btn ${user.role === 'admin' ? 'admin' : 'user'}" 
+                    <button onclick="toggleUserRole('${user.id}')"
+                            class="role-btn ${user.role === 'admin' ? 'admin' : 'user'}"
                             title="${user.role === 'admin' ? 'Remove admin' : 'Make admin'}">
                         ${user.role === 'admin' ? '👑' : '👤'}
                     </button>
@@ -443,22 +445,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const showLogsBtn = document.getElementById('showLogsBtn');
     if (showLogsBtn) {
         showLogsBtn.addEventListener('click', function() {
-            showLogs(selectedCommunity.name);
+            showLogs(selectedCommunity ? selectedCommunity.name : '');
         });
     }
 });
 
 // Add event listener for the "Show Users" button
 document.addEventListener('DOMContentLoaded', function() {
-    const showLogsBtn = document.getElementById('showUsersBtn');
-    if (showLogsBtn) {
-        showLogsBtn.addEventListener('click', function() {
-            showUsersPopup()
+    const showUsersBtn = document.getElementById('showUsersBtn');
+    if (showUsersBtn) {
+        showUsersBtn.addEventListener('click', function() {
+            showUsersPopup();
         });
     }
 });
 
-// Add event listener for the "Add User" button
+// Add event listener for the "Add Address" button
 document.addEventListener('DOMContentLoaded', function() {
     const addAddressBtn = document.getElementById('addAddressBtn');
     if (addAddressBtn) {
@@ -471,6 +473,10 @@ document.addEventListener('DOMContentLoaded', function() {
  * @param {string} communityName - The name of the community to show logs for.
  */
 function showLogs(communityName) {
+    if (!communityName) {
+        alert('No community selected');
+        return;
+    }
     document.getElementById('logPopupTitle').textContent = `Logs for ${communityName}`;
     document.getElementById('logPopup').style.display = 'block';
     updateLogs(communityName);
@@ -544,7 +550,7 @@ function displayLogs(logs) {
         const timestamp = new Date(log.timestamp).toLocaleString();
         logEntry.innerHTML = `
             <span class="timestamp">${timestamp}</span><br>
-            <span class="player">${log.player}</span>: 
+            <span class="player">${log.player}</span>:
             <span class="action">${log.action}</span>
         `;
         logContent.appendChild(logEntry);
@@ -563,6 +569,7 @@ function renderCommunities() {
     communityList.innerHTML = '';
     communities.forEach(community => {
         const li = document.createElement('li');
+        // The minus button for removing a community (admin only)
         li.innerHTML = `
             ${isAdmin ? `<button class="remove-btn" onclick="removeCommunity('${community.id}')">-</button>` : ''}
             <span>${community.name}</span>
@@ -1136,6 +1143,8 @@ async function updateAllowedUsers() {
  */
 function renderAllowedUsers() {
     const allowedUsersDropdown = document.getElementById('allowedUsersDropdown');
+    if (!allowedUsersDropdown) return;
+
     allowedUsersDropdown.innerHTML = '';
 
     if (selectedCommunity && selectedCommunity.allowedUsers) {
@@ -1146,21 +1155,10 @@ function renderAllowedUsers() {
             allowedUsersDropdown.appendChild(option);
         });
     }
-    document.getElementById('allowedUsersManagement').style.display = selectedCommunity ? 'block' : 'none';
-}
-
-/**
- * Removes the selected allowed user from the list and updates the server.
- * @function removeAllowedUser
- * @returns {void}
- */
-function removeAllowedUser() {
-    const allowedUsersDropdown = document.getElementById('allowedUsersDropdown');
-
-    Array.from(allowedUsersDropdown.selectedOptions).forEach(option => {
-        selectedCommunity.allowedUsers = selectedCommunity.allowedUsers.filter(u => u !== option.value);
-    });
-    updateAllowedUsers();
+    const allowedUsersManagement = document.getElementById('allowedUsersManagement');
+    if (allowedUsersManagement) {
+        allowedUsersManagement.style.display = selectedCommunity ? 'block' : 'none';
+    }
 }
 
 /**
@@ -1170,6 +1168,7 @@ function removeAllowedUser() {
  */
 function removeSelectedUsers() {
     const allowedUsersDropdown = document.getElementById('allowedUsersDropdown');
+    if (!allowedUsersDropdown) return;
 
     Array.from(allowedUsersDropdown.selectedOptions).forEach(option => {
         selectedCommunity.allowedUsers = selectedCommunity.allowedUsers.filter(u => u !== option.value);
@@ -1177,12 +1176,17 @@ function removeSelectedUsers() {
     updateAllowedUsers();
 }
 
-if (isAdmin) {
-    const addCommunityBtn = document.querySelector('.sidebar .add-btn');
-    if (addCommunityBtn) {
-        addCommunityBtn.addEventListener('click', addCommunity);
+/* ------------------------------------------------------------------
+   NEW: Toggle the sidebar on mobile via hamburger button
+------------------------------------------------------------------ */
+document.addEventListener('DOMContentLoaded', function() {
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    if (hamburgerBtn) {
+        hamburgerBtn.addEventListener('click', () => {
+            document.querySelector('.sidebar').classList.toggle('sidebar-open');
+        });
     }
-}
+});
 
 document.addEventListener('DOMContentLoaded', fetchCsrfToken);
 document.querySelector('main .add-btn').addEventListener('click', addAddress);
