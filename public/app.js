@@ -52,13 +52,12 @@ let currentUsername = null;
 document.addEventListener('DOMContentLoaded', async () => {
     await fetchCsrfToken();
     checkLoginStatus();
-    // Set up event listeners for user menu buttons and hamburger toggle.
+    // Set up event listeners for UI elements.
     setupUIEventListeners();
 });
 
 /**
  * Fetches the CSRF token from the server and stores it in the csrfToken variable.
- * Also sets the value of a hidden CSRF input if available.
  */
 async function fetchCsrfToken() {
     try {
@@ -78,7 +77,7 @@ async function fetchCsrfToken() {
 }
 
 /**
- * Updates the username displayed in the UI (for user menu).
+ * Updates the username displayed in the UI (for the user menu).
  * Also sets the user circle initial and full name.
  * @param {string} username - The username to display.
  */
@@ -129,8 +128,7 @@ async function checkLoginStatus() {
 }
 
 /**
- * Sets up event listeners for UI elements including the hamburger button,
- * user menu toggle, Change Password, and Logout buttons.
+ * Sets up event listeners for UI elements including hamburger, user menu, Change Password, and Logout buttons.
  */
 function setupUIEventListeners() {
     // Hamburger button for sidebar toggle on mobile
@@ -149,7 +147,6 @@ function setupUIEventListeners() {
             e.stopPropagation();
             userMenu.classList.toggle('show');
         });
-        // Hide user menu if clicking outside of it
         document.addEventListener('click', (evt) => {
             if (!userMenu.contains(evt.target) && evt.target !== userCircle) {
                 userMenu.classList.remove('show');
@@ -535,12 +532,14 @@ function renderCommunities() {
     communityList.innerHTML = '';
     communities.forEach(community => {
         const li = document.createElement('li');
+        // If admin, use a smaller remove button that displays an "×" instead of the text "Remove"
         li.innerHTML = `
-            ${isAdmin ? `<button class="remove-btn" onclick="removeCommunity('${community.id}')">Remove</button>` : ''}
+            ${isAdmin ? `<button class="remove-btn-sidebar" onclick="removeCommunity('${community.id}')">&times;</button>` : ''}
             <span>${community.name}</span>
         `;
         li.onclick = (event) => {
-            if (event.target !== li.querySelector('.remove-btn')) {
+            // Prevent the click from firing when clicking the remove button
+            if (event.target !== li.querySelector('.remove-btn-sidebar')) {
                 selectCommunity(community.id);
             }
         };
@@ -1037,8 +1036,5 @@ function removeSelectedUsers() {
     updateAllowedUsers();
 }
 
-// Initialize CSRF token fetch (already handled in DOMContentLoaded above)
-document.addEventListener('DOMContentLoaded', fetchCsrfToken);
-
-// Fetch initial data
+// Fetch initial CSRF token and data (already set up in DOMContentLoaded above)
 fetchData();
