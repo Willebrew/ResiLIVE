@@ -345,6 +345,22 @@ h1, h2, h3, h4, p {
     display: block;
 }
 
+.remove-btn-sidebar {
+    background-color: var(--color-btn-remove-bg); /* red background */
+    color: var(--color-btn-remove-text);           /* white text */
+    border: none;
+    border-radius: var(--btn-radius);
+    cursor: pointer;
+    font-size: 0.8em;
+    padding: 4px 8px;         /* slightly smaller padding */
+    margin-right: 8px;        /* extra space between button and community name */
+    transition: opacity 0.2s;
+}
+
+.remove-btn-sidebar:hover {
+    opacity: 0.8;
+}
+
 /********************************************************
   ALLOWED USERS SECTION
 *********************************************************/
