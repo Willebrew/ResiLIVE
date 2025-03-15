@@ -9,41 +9,44 @@
     --btn-radius: 20px;            /* Pill-shaped button radius */
 }
 
-/* Reset and basic styles */
+/* Basic reset */
 * {
     box-sizing: border-box;
 }
 
-/* Rainbow glow background via a pseudo-element */
+/* Animated, morphing rainbow circle background */
 body::before {
     content: "";
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet, red);
-    background-size: 400% 400%;
-    filter: blur(50px);
-    opacity: 0.5;
-    animation: gradientAnimation 15s ease infinite;
+    top: 50%;
+    left: 50%;
+    width: 400px;
+    height: 400px;
+    background: conic-gradient(from 0deg, red, orange, yellow, green, blue, indigo, violet, red);
+    filter: blur(80px);
+    transform: translate(-50%, -50%);
+    opacity: 0.7;
+    border-radius: 50%;
+    /* Clip the pseudo-element to a circle to avoid visible edges */
+    clip-path: circle(200px at center);
+    animation: morph 10s ease-in-out infinite;
     z-index: -1;
 }
 
-/* Keyframes for smooth gradient animation */
-@keyframes gradientAnimation {
+/* Keyframes to rotate and subtly scale the circle, creating a morphing effect */
+@keyframes morph {
     0% {
-        background-position: 0% 50%;
+        transform: translate(-50%, -50%) scale(1) rotate(0deg);
     }
     50% {
-        background-position: 100% 50%;
+        transform: translate(-50%, -50%) scale(1.05) rotate(180deg);
     }
     100% {
-        background-position: 0% 50%;
+        transform: translate(-50%, -50%) scale(1) rotate(360deg);
     }
 }
 
-/* Body and container styles */
+/* Page styles */
 body {
     margin: 0;
     padding: 0;
@@ -65,7 +68,6 @@ body {
     width: 320px;
 }
 
-/* Headings */
 h1 {
     text-align: center;
     margin-bottom: 20px;
@@ -80,7 +82,6 @@ h2 {
     font-size: 1.2em;
 }
 
-/* Form and input styling */
 form {
     display: flex;
     flex-direction: column;
@@ -100,7 +101,6 @@ input::placeholder {
     color: #999;
 }
 
-/* Button styling */
 .login-btn {
     padding: 10px;
     border: none;
@@ -116,7 +116,6 @@ input::placeholder {
     background-color: #3a7fcb;
 }
 
-/* Registration message */
 .register-message {
     text-align: center;
     margin-top: 20px;
