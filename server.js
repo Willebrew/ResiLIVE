@@ -50,9 +50,24 @@ app.use(express.static('public', {
 }));
 
 // Add cookie-session configuration
+const sessionSecret = process.env.SESSION_SECRET;
+const placeholderSecret = 'super-secret-key-please-change-this-silly';
+
+if (process.env.NODE_ENV === 'production') {
+    if (!sessionSecret || sessionSecret === placeholderSecret) {
+        console.error('FATAL ERROR: SESSION_SECRET is not defined or is set to the placeholder in production. Please set a strong, unique secret in your .env file.');
+        process.exit(1); // Exit the application
+    }
+} else {
+    // In development, if SESSION_SECRET is not set, use the placeholder and log a warning
+    if (!sessionSecret) {
+        console.warn('WARNING: SESSION_SECRET is not set. Using a placeholder secret for development. Set SESSION_SECRET in your .env file for better security.');
+    }
+}
+
 app.use(cookieSession({
     name: 'session',
-    keys: [process.env.SESSION_SECRET || 'your-secret-key'],
+    keys: [sessionSecret || placeholderSecret],
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
@@ -60,7 +75,7 @@ app.use(cookieSession({
 }));
 
 app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: process.env.NODE_ENV === 'production' ? process.env.CLIENT_ORIGIN_URL : 'http://localhost:3000',
     credentials: true
 }));
 
@@ -816,7 +831,7 @@ async function logAccess(communityName, playerName, action) {
 }
 
 // Route to log access to a community
-app.post('/api/log-access', async (req, res) => {
+app.post('/api/log-access', requireApiKey, async (req, res) => {
     const { community, player, action } = req.body;
 
     try {
