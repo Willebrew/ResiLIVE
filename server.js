@@ -201,6 +201,21 @@ function requireAdmin(req, res, next) {
     }
 }
 
+/**
+ * Middleware to require API key authentication.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next middleware function.
+ */
+function requireApiKey(req, res, next) {
+    const apiKey = req.headers['x-api-key']; // Or 'Authorization' if you prefer Bearer tokens
+    if (apiKey && apiKey === process.env.API_SECRET_KEY) {
+        next();
+    } else {
+        res.status(401).json({ error: 'Unauthorized. Invalid or missing API Key.' });
+    }
+}
+
 // Route to register a new user
 app.post('/api/register', requireAuth, requireAdmin, async (req, res) => {
     try {
@@ -1047,7 +1062,7 @@ async function removeExpiredCodes() {
 setInterval(removeExpiredCodes, 60000);
 
 // Route to serve the main API data file
-app.get('/api', limiter, async (req, res) => {
+app.get('/api', limiter, requireApiKey, async (req, res) => {
     try {
         const snapshot = await db.collection('communities').get();
         const communities = snapshot.docs.map(doc => ({
