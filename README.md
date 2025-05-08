@@ -42,10 +42,11 @@ addresses, residents, and access codes.
 
 - **Authentication Security**
     - Password hashing using bcrypt
-    - Session-based authentication with secure cookies
+    - Session-based authentication with secure cookies (HttpOnly, Secure in production, SameSite=Lax)
     - Role-based access control (user, admin, superuser)
+    - **Robust Session Secret Management**: The application requires a strong, unique `SESSION_SECRET` to be set in the environment variables for production. It will fail to start if the secret is missing or uses an insecure placeholder, preventing accidental deployment with weak defaults.
 
-- **Data Security**
+- **Data Security****
     - Firebase Firestore security rules
     - Input validation and sanitization
     - CSRF protection via lusca
@@ -59,9 +60,10 @@ addresses, residents, and access codes.
 
 - **API Security**
     - Request rate limiting
-    - CORS configuration
+    - **API Key Authentication**: Critical API endpoints (like `/api/log-access`) are protected by an API key (via `X-API-Key` header), ensuring that only authorized services (e.g., the Roblox game server) can access them.
+    - **Configurable CORS Policy**: Cross-Origin Resource Sharing (CORS) is strictly configured via the `CLIENT_ORIGIN_URL` environment variable in production, allowing access only from the designated frontend domain(s). In development, it defaults to `http://localhost:3000`.
     - Secure session management
-    - Protected endpoints requiring authentication
+    - Protected endpoints requiring user authentication
 
 ## Getting Started
 
@@ -161,9 +163,13 @@ select "Project Overview" and press "Project settings". In the "Service Accounts
 FIREBASE_PROJECT_ID=your-project-id
 FIREBASE_PRIVATE_KEY="your-private-key"
 FIREBASE_CLIENT_EMAIL=your-client-email
-SESSION_SECRET=a-very-long-random-string
-NODE_ENV=development
+API_SECRET_KEY=your-strong-generated-api-secret-key # Used for server-to-server or trusted client authentication
+SESSION_SECRET=a-very-long-random-string-generated-by-you # For user session cookies
+CLIENT_ORIGIN_URL=https://your-production-frontend-domain.com # Your frontend URL for CORS in production
+NODE_ENV=development # Set to 'production' for deployment
 ```
+
+**Note on Secrets**: Both `API_SECRET_KEY` and `SESSION_SECRET` should be strong, randomly generated strings. You can use tools like OpenSSL (e.g., `openssl rand -hex 32`) or a password manager to create these. Store them securely and never commit them to version control (ensure your `.env` file is in `.gitignore`).
 
 ## Contributing
 
