@@ -77,24 +77,6 @@ async function fetchCsrfToken() {
 }
 
 /**
- * Handles the click event for the "Refresh Logs" button.
- * It calls updateLogs if a community is selected.
- */
-function handleRefreshLogs() {
-    if (selectedCommunity && selectedCommunity.name) {
-        updateLogs(selectedCommunity.name);
-    } else {
-        console.warn('No community selected, cannot refresh logs.');
-        // Optionally, display a message to the user in the log popup
-        // if trying to refresh without a selected community.
-        const logContent = document.getElementById('logContent');
-        if (logContent) {
-            logContent.innerHTML = '<p style="text-align:center; color: var(--color-text-secondary);">Please select a community to view logs.</p>';
-        }
-    }
-}
-
-/**
  * Updates the username displayed in the UI (for the user menu).
  * Also sets the user circle initial and full name.
  * @param {string} username - The username to display.
@@ -473,6 +455,17 @@ function showLogs(communityName) {
     document.getElementById('logPopupTitle').textContent = `Logs for ${communityName}`;
     document.getElementById('logPopup').style.display = 'block';
     updateLogs(communityName);
+
+    // Set an interval to refresh logs every 10 seconds if the popup is still open
+    window.logUpdateInterval = setInterval(() => {
+        if (document.getElementById('logPopup').style.display === 'block') {
+            updateLogs(communityName);
+        } else {
+            // If popup was closed by other means, clear this interval
+            if(window.logUpdateInterval) clearInterval(window.logUpdateInterval);
+        }
+    }, 10000); // 10 seconds
+
     // Automatically close the log popup after 5 minutes
     if (window.logPopupTimeout) {
         clearTimeout(window.logPopupTimeout);
