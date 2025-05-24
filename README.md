@@ -46,7 +46,7 @@ addresses, residents, and access codes.
     - Role-based access control (user, admin, superuser)
     - **Robust Session Secret Management**: The application requires a strong, unique `SESSION_SECRET` to be set in the environment variables for production. It will fail to start if the secret is missing or uses an insecure placeholder, preventing accidental deployment with weak defaults.
 
-- **Data Security****
+- **Data Security**
     - Firebase Firestore security rules
     - Input validation and sanitization
     - CSRF protection via lusca
