@@ -114,7 +114,7 @@ app.use((req, res, next) => {
 });
 
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' ? process.env.CLIENT_ORIGIN_URL : 'http://localhost:3000',
+    origin: process.env.CLIENT_ORIGIN_URL || (process.env.NODE_ENV === 'production' ? 'http://example.com' : 'http://localhost:3000'),
     credentials: true
 }));
 
