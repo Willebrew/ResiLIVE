@@ -77,6 +77,24 @@ async function fetchCsrfToken() {
 }
 
 /**
+ * Handles the click event for the "Refresh Logs" button.
+ * It calls updateLogs if a community is selected.
+ */
+function handleRefreshLogs() {
+    if (selectedCommunity && selectedCommunity.name) {
+        updateLogs(selectedCommunity.name);
+    } else {
+        console.warn('No community selected, cannot refresh logs.');
+        // Optionally, display a message to the user in the log popup
+        // if trying to refresh without a selected community.
+        const logContent = document.getElementById('logContent');
+        if (logContent) {
+            logContent.innerHTML = '<p style="text-align:center; color: var(--color-text-secondary);">Please select a community to view logs.</p>';
+        }
+    }
+}
+
+/**
  * Updates the username displayed in the UI (for the user menu).
  * Also sets the user circle initial and full name.
  * @param {string} username - The username to display.
@@ -451,13 +469,18 @@ function showLogs(communityName) {
         alert('No community selected');
         return;
     }
+    if (window.logUpdateInterval) { clearInterval(window.logUpdateInterval); } // Clear existing refresh interval
     document.getElementById('logPopupTitle').textContent = `Logs for ${communityName}`;
     document.getElementById('logPopup').style.display = 'block';
     updateLogs(communityName);
-    if (window.logUpdateInterval) {
-        clearInterval(window.logUpdateInterval);
+    // Automatically close the log popup after 5 minutes
+    if (window.logPopupTimeout) {
+        clearTimeout(window.logPopupTimeout);
     }
-    window.logUpdateInterval = setInterval(() => updateLogs(communityName), 5000);
+    window.logPopupTimeout = setTimeout(() => {
+        console.log('Log popup automatically closing due to timeout.');
+        closeLogPopup();
+    }, 5 * 60 * 1000); // 5 minutes
 }
 
 /**
@@ -469,12 +492,13 @@ function showUsersPopup() {
 }
 
 /**
- * Closes the log popup and clears the log update interval.
+ * Closes the log popup and clears the log update interval and auto-close timeout.
  */
 function closeLogPopup() {
+    if (window.logPopupTimeout) { clearTimeout(window.logPopupTimeout); } // Clear auto-close timeout
     document.getElementById('logPopup').style.display = 'none';
     if (window.logUpdateInterval) {
-        clearInterval(window.logUpdateInterval);
+        clearInterval(window.logUpdateInterval); // Clear any potential polling interval
     }
 }
 
