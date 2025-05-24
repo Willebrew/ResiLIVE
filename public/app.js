@@ -183,6 +183,38 @@ function setupUIEventListeners() {
     if (addAddressBtn) {
         addAddressBtn.addEventListener('click', addAddress);
     }
+
+    // Refactored popup button event listeners
+    const closeLogPopupBtn = document.getElementById('closeLogPopupBtn');
+    if (closeLogPopupBtn) {
+        closeLogPopupBtn.addEventListener('click', closeLogPopup);
+    }
+
+    const addUserBtn = document.getElementById('addUserBtn');
+    if (addUserBtn) {
+        addUserBtn.addEventListener('click', addUser);
+    }
+
+    const closeUsersPopupBtn = document.getElementById('closeUsersPopupBtn');
+    if (closeUsersPopupBtn) {
+        closeUsersPopupBtn.addEventListener('click', closeUsersPopup);
+    }
+
+    // Refactored sidebar button event listeners
+    const addCommunityBtn = document.getElementById('12'); // This is the button with id '12'
+    if (addCommunityBtn) {
+        addCommunityBtn.addEventListener('click', addCommunity);
+    }
+
+    const updateAllowedUsersBtn = document.getElementById('updateAllowedUsersBtn');
+    if (updateAllowedUsersBtn) {
+        updateAllowedUsersBtn.addEventListener('click', updateAllowedUsers);
+    }
+
+    const removeSelectedUsersBtn = document.getElementById('removeSelectedUsersBtn');
+    if (removeSelectedUsersBtn) {
+        removeSelectedUsersBtn.addEventListener('click', removeSelectedUsers);
+    }
 }
 
 /**
@@ -249,22 +281,34 @@ async function toggleUserRole(userId) {
  */
 function renderUsers() {
     const usersList = document.getElementById('usersList');
-    usersList.innerHTML = '';
+    usersList.innerHTML = ''; // Clear existing list items
     users.forEach(user => {
         if (user.id !== currentUserId && user.role !== 'superuser') {
             const userElement = document.createElement('div');
             userElement.className = 'user-item';
-            userElement.innerHTML = `
-                <span>${user.username}</span>
-                <div class="user-controls">
-                    <button onclick="toggleUserRole('${user.id}')"
-                            class="role-btn ${user.role === 'admin' ? 'admin' : 'user'}"
-                            title="${user.role === 'admin' ? 'Remove admin' : 'Make admin'}">
-                        ${user.role === 'admin' ? '👑' : '👤'}
-                    </button>
-                    <button onclick="removeUser('${user.id}')" class="remove-btn">-</button>
-                </div>
-            `;
+
+            const usernameSpan = document.createElement('span');
+            usernameSpan.textContent = user.username;
+            userElement.appendChild(usernameSpan);
+
+            const controlsDiv = document.createElement('div');
+            controlsDiv.className = 'user-controls';
+
+            const roleButton = document.createElement('button');
+            roleButton.className = `role-btn ${user.role === 'admin' ? 'admin' : 'user'}`;
+            roleButton.title = user.role === 'admin' ? 'Remove admin' : 'Make admin';
+            roleButton.textContent = user.role === 'admin' ? '👑' : '👤';
+            roleButton.addEventListener('click', () => toggleUserRole(user.id));
+            controlsDiv.appendChild(roleButton);
+
+            const removeUserButton = document.createElement('button');
+            removeUserButton.className = 'remove-btn';
+            removeUserButton.textContent = '-';
+            removeUserButton.title = 'Remove user';
+            removeUserButton.addEventListener('click', () => removeUser(user.id));
+            controlsDiv.appendChild(removeUserButton);
+
+            userElement.appendChild(controlsDiv);
             usersList.appendChild(userElement);
         }
     });
@@ -555,20 +599,30 @@ function displayLogs(logs) {
  */
 function renderCommunities() {
     const communityList = document.getElementById('communityList');
-    communityList.innerHTML = '';
+    communityList.innerHTML = ''; // Clear existing list items
     communities.forEach(community => {
         const li = document.createElement('li');
-        // If admin, use a smaller remove button that displays an "×" instead of the text "Remove"
-        li.innerHTML = `
-            ${isAdmin ? `<button class="remove-btn-sidebar" onclick="removeCommunity('${community.id}')">&times;</button>` : ''}
-            <span>${community.name}</span>
-        `;
-        li.onclick = (event) => {
-            // Prevent the click from firing when clicking the remove button
-            if (event.target !== li.querySelector('.remove-btn-sidebar')) {
-                selectCommunity(community.id);
-            }
-        };
+
+        if (isAdmin) {
+            const removeButton = document.createElement('button');
+            removeButton.className = 'remove-btn-sidebar';
+            removeButton.innerHTML = '&times;'; // Use innerHTML for HTML entities like &times;
+            removeButton.title = 'Remove community';
+            removeButton.addEventListener('click', (event) => {
+                event.stopPropagation(); // Prevent li click event from firing
+                removeCommunity(community.id);
+            });
+            li.appendChild(removeButton);
+        }
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = community.name;
+        li.appendChild(nameSpan);
+
+        li.addEventListener('click', () => {
+            selectCommunity(community.id);
+        });
+
         if (selectedCommunity && community.id === selectedCommunity.id) {
             li.classList.add('active');
         }
@@ -594,7 +648,8 @@ function selectCommunity(communityId) {
  */
 function renderAddresses() {
     const addressList = document.getElementById('addressList');
-    addressList.innerHTML = '';
+    addressList.innerHTML = ''; // Clear existing list items
+
     if (selectedCommunity && selectedCommunity.addresses) {
         selectedCommunity.addresses.forEach(address => {
             const li = document.createElement('li');
@@ -602,28 +657,72 @@ function renderAddresses() {
             if (address.isNew) {
                 li.classList.add('new-address');
                 setTimeout(() => {
-                    delete address.isNew;
+                    // address.isNew is a temporary client-side flag, no need to persist this change via API
+                    const currentAddress = selectedCommunity.addresses.find(a => a.id === address.id);
+                    if (currentAddress) delete currentAddress.isNew;
+                    li.classList.remove('new-address'); // Also remove the class after timeout
                 }, 300);
             }
-            li.innerHTML = `
-                <div class="address-main">
-                    <button class="remove-btn" onclick="removeAddress('${address.id}')">Remove</button>
-                    <span class="address-text" onclick="toggleAddressDetails('${address.id}')">${address.street}</span>
-                </div>
-                <div class="address-details" id="details-${address.id}">
-                    <div class="user-ids">
-                        <h4>User IDs:</h4>
-                        <ul class="user-id-list"></ul>
-                        <button class="add-btn" onclick="addUserId('${address.id}')">Add User ID</button>
-                    </div>
-                    <div class="codes">
-                        <h4>Codes:</h4>
-                        <ul class="code-list"></ul>
-                        <button class="add-btn" onclick="addCode('${address.id}')">Add Code</button>
-                    </div>
-                </div>
-            `;
+
+            // Create address-main div
+            const addressMainDiv = document.createElement('div');
+            addressMainDiv.className = 'address-main';
+
+            const removeAddressBtn = document.createElement('button');
+            removeAddressBtn.className = 'remove-btn';
+            removeAddressBtn.textContent = 'Remove';
+            removeAddressBtn.addEventListener('click', () => removeAddress(address.id));
+            addressMainDiv.appendChild(removeAddressBtn);
+
+            const addressTextSpan = document.createElement('span');
+            addressTextSpan.className = 'address-text';
+            addressTextSpan.textContent = address.street;
+            addressTextSpan.addEventListener('click', () => toggleAddressDetails(address.id));
+            addressMainDiv.appendChild(addressTextSpan);
+
+            li.appendChild(addressMainDiv);
+
+            // Create address-details div
+            const addressDetailsDiv = document.createElement('div');
+            addressDetailsDiv.className = 'address-details';
+            addressDetailsDiv.id = `details-${address.id}`;
+
+            // User IDs section
+            const userIdsDiv = document.createElement('div');
+            userIdsDiv.className = 'user-ids';
+            const userIdsH4 = document.createElement('h4');
+            userIdsH4.textContent = 'User IDs:';
+            userIdsDiv.appendChild(userIdsH4);
+            const userIdListUl = document.createElement('ul');
+            userIdListUl.className = 'user-id-list';
+            userIdsDiv.appendChild(userIdListUl); // ul will be populated by renderUserIds
+            const addUserIdBtn = document.createElement('button');
+            addUserIdBtn.className = 'add-btn';
+            addUserIdBtn.textContent = 'Add User ID';
+            addUserIdBtn.addEventListener('click', () => addUserId(address.id));
+            userIdsDiv.appendChild(addUserIdBtn);
+            addressDetailsDiv.appendChild(userIdsDiv);
+
+            // Codes section
+            const codesDiv = document.createElement('div');
+            codesDiv.className = 'codes';
+            const codesH4 = document.createElement('h4');
+            codesH4.textContent = 'Codes:';
+            codesDiv.appendChild(codesH4);
+            const codeListUl = document.createElement('ul');
+            codeListUl.className = 'code-list';
+            codesDiv.appendChild(codeListUl); // ul will be populated by renderCodes
+            const addCodeBtn = document.createElement('button');
+            addCodeBtn.className = 'add-btn';
+            addCodeBtn.textContent = 'Add Code';
+            addCodeBtn.addEventListener('click', () => addCode(address.id));
+            codesDiv.appendChild(addCodeBtn);
+            addressDetailsDiv.appendChild(codesDiv);
+
+            li.appendChild(addressDetailsDiv);
             addressList.appendChild(li);
+
+            // Call renderUserIds and renderCodes to populate the respective lists
             renderUserIds(address);
             renderCodes(address);
         });
@@ -645,14 +744,24 @@ function toggleAddressDetails(addressId) {
  */
 function renderUserIds(address) {
     const userIdList = document.querySelector(`#details-${address.id} .user-id-list`);
-    userIdList.innerHTML = '';
+    if (!userIdList) return; // Guard against null if the structure isn't ready
+    userIdList.innerHTML = ''; // Clear existing items
+
     if (address.people) {
         address.people.forEach(person => {
             const li = document.createElement('li');
-            li.innerHTML = `
-                <button class="remove-btn" onclick="removeUserId('${address.id}', '${person.id}')">-</button>
-                <span>${person.username} (Player ID: ${person.playerId})</span>
-            `;
+
+            const removePersonBtn = document.createElement('button');
+            removePersonBtn.className = 'remove-btn';
+            removePersonBtn.textContent = '-';
+            removePersonBtn.title = `Remove user ${person.username}`;
+            removePersonBtn.addEventListener('click', () => removeUserId(address.id, person.id));
+            li.appendChild(removePersonBtn);
+
+            const personDetailsSpan = document.createElement('span');
+            personDetailsSpan.textContent = `${person.username} (Player ID: ${person.playerId})`;
+            li.appendChild(personDetailsSpan);
+
             userIdList.appendChild(li);
         });
     }
@@ -664,14 +773,24 @@ function renderUserIds(address) {
  */
 function renderCodes(address) {
     const codeList = document.querySelector(`#details-${address.id} .code-list`);
-    codeList.innerHTML = '';
+    if (!codeList) return; // Guard against null
+    codeList.innerHTML = ''; // Clear existing items
+
     if (address.codes) {
         address.codes.forEach(code => {
             const li = document.createElement('li');
-            li.innerHTML = `
-                <button class="remove-btn" onclick="removeCode('${address.id}', '${code.id}')">-</button>
-                <span>${code.description} (Code: ${code.code}, Expires: ${new Date(code.expiresAt).toLocaleString()})</span>
-            `;
+
+            const removeCodeBtn = document.createElement('button');
+            removeCodeBtn.className = 'remove-btn';
+            removeCodeBtn.textContent = '-';
+            removeCodeBtn.title = `Remove code ${code.description}`;
+            removeCodeBtn.addEventListener('click', () => removeCode(address.id, code.id));
+            li.appendChild(removeCodeBtn);
+
+            const codeDetailsSpan = document.createElement('span');
+            codeDetailsSpan.textContent = `${code.description} (Code: ${code.code}, Expires: ${new Date(code.expiresAt).toLocaleString()})`;
+            li.appendChild(codeDetailsSpan);
+
             codeList.appendChild(li);
         });
     }
