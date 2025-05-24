@@ -43,6 +43,14 @@ const limiter = RateLimit({
 
 app.set('trust proxy', 1);
 
+// Enforce HTTPS in production
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] !== 'https') {
+    return res.redirect(301, `https://${req.headers.host}${req.url}`);
+  }
+  next();
+});
+
 // Middleware setup
 app.use(express.json());
 app.use(express.static('public', {
@@ -65,6 +73,24 @@ if (process.env.NODE_ENV === 'production') {
     }
 }
 
+// API_SECRET_KEY configuration and validation
+// IMPORTANT: For production, API_SECRET_KEY must be a strong, unique, randomly generated string.
+// It should be different from other secrets like SESSION_SECRET.
+const apiSecretKey = process.env.API_SECRET_KEY;
+const commonApiPlaceholders = ['YOUR_API_SECRET_KEY_HERE', 'changeme', 'secret', 'ENTER_YOUR_API_KEY'];
+
+if (process.env.NODE_ENV === 'production') {
+    if (!apiSecretKey || apiSecretKey.trim() === '' || commonApiPlaceholders.includes(apiSecretKey)) {
+        console.error('FATAL ERROR: API_SECRET_KEY is not defined, is empty, or uses a common placeholder in production. Please set a strong, unique secret in your .env file.');
+        process.exit(1); // Exit the application
+    }
+} else {
+    // In development, if API_SECRET_KEY is not set or is a placeholder, log a warning
+    if (!apiSecretKey || commonApiPlaceholders.includes(apiSecretKey)) {
+        console.warn('WARNING: API_SECRET_KEY is not set or is using a placeholder. For production, ensure a strong, unique secret is set in your .env file.');
+    }
+}
+
 app.use(cookieSession({
     name: 'session',
     keys: [sessionSecret || placeholderSecret],
@@ -73,6 +99,19 @@ app.use(cookieSession({
     httpOnly: true,
     sameSite: 'lax'
 }));
+
+// Security Headers Middleware
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    // CSP: allow self, inline scripts/styles (can be improved), data URIs for images, firebase connections. Disallow objects and framing from others.
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com;");
+
+    if (process.env.NODE_ENV === 'production') {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
+});
 
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' ? process.env.CLIENT_ORIGIN_URL : 'http://localhost:3000',
@@ -218,15 +257,19 @@ function requireAdmin(req, res, next) {
 
 /**
  * Middleware to require API key authentication.
+ * It checks for the 'x-api-key' header and validates it against the API_SECRET_KEY.
+ * IMPORTANT: API_SECRET_KEY must be a strong, unique, randomly generated string for production.
  * @param {Object} req - The request object.
  * @param {Object} res - The response object.
  * @param {Function} next - The next middleware function.
  */
 function requireApiKey(req, res, next) {
     const apiKey = req.headers['x-api-key']; // Or 'Authorization' if you prefer Bearer tokens
-    if (apiKey && apiKey === process.env.API_SECRET_KEY) {
+    // Use the validated apiSecretKey from the startup check
+    if (apiKey && apiSecretKey && apiKey === apiSecretKey) {
         next();
     } else {
+        // Generic error message to avoid leaking information about the key's existence
         res.status(401).json({ error: 'Unauthorized. Invalid or missing API Key.' });
     }
 }
