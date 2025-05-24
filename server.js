@@ -3,6 +3,7 @@
  * @description This file contains the main server code for the application, including routes, middleware, and utility functions.
  */
 require('dotenv').config();
+const crypto = require('crypto');
 const express = require('express');
 const cookieSession = require('cookie-session');
 const admin = require('firebase-admin');
@@ -104,10 +105,21 @@ app.use(cookieSession({
 app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
-    // CSP: allow self, nonce-based inline scripts/styles, data URIs for images, firebase connections. Disallow objects and framing from others.
-    const nonce = crypto.randomBytes(16).toString('base64'); // Generate a unique nonce for each request
-    res.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'nonce-${nonce}'; img-src 'self' data:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com;`);
-    res.locals.nonce = nonce; // Attach the nonce to the response object for use in templates or inline scripts
+    
+    const nonce = crypto.randomBytes(16).toString('base64');
+    res.locals.nonce = nonce; // Make nonce available for templates if needed
+
+    const cspDirectives = [
+        "default-src 'self'",
+        `script-src 'self' 'nonce-${nonce}'`, // Allow self and scripts with the correct nonce
+        `style-src 'self' 'nonce-${nonce}'`,  // Allow self and styles with the correct nonce
+        "img-src 'self' data:",              // Allow images from self and data URIs
+        "font-src 'self' https://www.perplexity.ai data:", // Allow fonts from self, perplexity.ai, and data URIs
+        "object-src 'none'",                 // Disallow plugins (Flash, etc.)
+        "frame-ancestors 'none'",            // Disallow embedding in iframes
+        "connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com" // Allowed connection sources
+    ];
+    res.setHeader('Content-Security-Policy', cspDirectives.join('; '));
 
     if (process.env.NODE_ENV === 'production') {
         res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
@@ -116,7 +128,7 @@ app.use((req, res, next) => {
 });
 
 app.use(cors({
-    origin: process.env.CLIENT_ORIGIN_URL || (process.env.NODE_ENV === 'production' ? 'http://example.com' : 'http://localhost:3000'),
+    origin: process.env.NODE_ENV === 'production' ? process.env.CLIENT_ORIGIN_URL : 'http://localhost:3000',
     credentials: true
 }));
 
@@ -272,7 +284,7 @@ function requireApiKey(req, res, next) {
         next();
     } else {
         // Generic error message to avoid leaking information about the key's existence
-        return res.status(401).json({ error: 'Unauthorized. Invalid or missing API Key.' });
+        res.status(401).json({ error: 'Unauthorized. Invalid or missing API Key.' });
     }
 }
 
