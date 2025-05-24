@@ -6,6 +6,7 @@
     <title>ResiLIVE</title>
     <link rel="icon" type="image/png" href="icon.png" />
     <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 <body>
 <!-- Top Navigation / Header -->
@@ -108,7 +109,31 @@
     </div>
 </div>
 
+<!-- Add Code Popup -->
+<div id="addCodeModal" class="popup">
+    <div class="popup-content">
+        <h2>Add New Code</h2>
+        <div>
+            <label for="codeDescriptionInput">Description:</label>
+            <input type="text" id="codeDescriptionInput" placeholder="e.g., Front Door">
+        </div>
+        <div>
+            <label for="codeValueInput">Code:</label>
+            <input type="text" id="codeValueInput" placeholder="e.g., 12345">
+        </div>
+        <div>
+            <label for="codeExpiryInput">Expires At:</label>
+            <input type="text" id="codeExpiryInput" placeholder="Select date and time">
+        </div>
+        <div class="popup-buttons" style="margin-top: 15px;">
+            <button id="saveCodeBtn" class="action-btn">Save Code</button>
+            <button id="cancelAddCodeBtn" class="close-btn-popup">Cancel</button>
+        </div>
+    </div>
+</div>
+
 <!-- Main JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -45,6 +45,7 @@ let currentUserId = null;
  * @type {null}
  */
 let currentUsername = null;
+window.codeExpiryFlatpickr = null; // For Flatpickr instance
 
 /**
  * Event listener for the DOMContentLoaded event to fetch the CSRF token when the document is fully loaded.
@@ -214,6 +215,87 @@ function setupUIEventListeners() {
     const removeSelectedUsersBtn = document.getElementById('removeSelectedUsersBtn');
     if (removeSelectedUsersBtn) {
         removeSelectedUsersBtn.addEventListener('click', removeSelectedUsers);
+    }
+
+    // Event listener for "Save Code" button in the Add Code Modal
+    const saveCodeBtn = document.getElementById('saveCodeBtn');
+    if (saveCodeBtn) {
+        saveCodeBtn.addEventListener('click', async () => {
+            const addCodeModal = document.getElementById('addCodeModal');
+            const addressId = addCodeModal.dataset.addressId; // Retrieve stored addressId
+            const description = document.getElementById('codeDescriptionInput').value;
+            const codeValue = document.getElementById('codeValueInput').value; // Renamed to avoid conflict
+            const expiryDateInstance = window.codeExpiryFlatpickr; // Get the flatpickr instance
+
+            if (!expiryDateInstance || expiryDateInstance.selectedDates.length === 0) {
+                alert('Please select an expiration date and time.');
+                return;
+            }
+            const expiresAt = expiryDateInstance.selectedDates[0].toISOString();
+
+            if (description && codeValue && expiresAt && addressId) {
+                try {
+                    // Ensure selectedCommunity and selectedCommunity.id are valid
+                    if (!selectedCommunity || !selectedCommunity.id) {
+                        alert('Error: No community selected. Cannot add code.');
+                        console.error('Error: selectedCommunity or selectedCommunity.id is not set.');
+                        return;
+                    }
+                    const response = await fetch(`/api/communities/${selectedCommunity.id}/addresses/${addressId}/codes`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken
+                        },
+                        body: JSON.stringify({ description, code: codeValue, expiresAt }),
+                        credentials: 'include'
+                    });
+                    if (response.ok) {
+                        const newCode = await response.json();
+                        const address = selectedCommunity.addresses.find(a => a.id === addressId);
+                        if (address) {
+                            if (!address.codes) {
+                                address.codes = [];
+                            }
+                            address.codes.push(newCode);
+                            renderCodes(address); // Re-render codes for that specific address
+                        }
+                        addCodeModal.style.display = 'none'; // Hide modal
+                        delete addCodeModal.dataset.addressId; // Clean up dataset
+                    } else {
+                        const errorData = await response.json();
+                        console.error('Failed to add code:', errorData.error || response.statusText);
+                        alert('Failed to add code: ' + (errorData.error || response.statusText));
+                    }
+                } catch (error) {
+                    console.error('Error adding code:', error);
+                    alert('An error occurred while adding the code.');
+                }
+            } else {
+                alert('Please fill in all fields: description, code, and expiration date.');
+            }
+        });
+    }
+
+    // Event listener for "Cancel" button in the Add Code Modal
+    const cancelAddCodeBtn = document.getElementById('cancelAddCodeBtn');
+    if (cancelAddCodeBtn) {
+        cancelAddCodeBtn.addEventListener('click', () => {
+            const addCodeModal = document.getElementById('addCodeModal');
+            const codeDescriptionInput = document.getElementById('codeDescriptionInput');
+            const codeValueInput = document.getElementById('codeValueInput');
+            
+            // Clear fields
+            codeDescriptionInput.value = '';
+            codeValueInput.value = '';
+            if (window.codeExpiryFlatpickr) {
+                window.codeExpiryFlatpickr.clear();
+            }
+            
+            addCodeModal.style.display = 'none';
+            // Clean up dataset
+            delete addCodeModal.dataset.addressId; 
+        });
     }
 }
 
@@ -1047,36 +1129,32 @@ async function removeUserId(addressId, userIdId) {
  * @param {string} addressId - The ID of the address.
  */
 async function addCode(addressId) {
-    const address = selectedCommunity.addresses.find(a => a.id === addressId);
-    if (!address) return;
-    const description = prompt('Enter code description:');
-    const code = prompt('Enter code:');
-    const expiresAt = prompt('Enter expiration date and time (YYYY-MM-DD HH:MM):');
-    if (description && code && expiresAt) {
-        try {
-            const response = await fetch(`/api/communities/${selectedCommunity.id}/addresses/${addressId}/codes`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': csrfToken
-                },
-                body: JSON.stringify({ description, code, expiresAt: new Date(expiresAt).toISOString() }),
-                credentials: 'include'
-            });
-            if (response.ok) {
-                const newCode = await response.json();
-                if (!address.codes) {
-                    address.codes = [];
-                }
-                address.codes.push(newCode);
-                renderCodes(address);
-            } else {
-                console.error('Failed to add code:', response.statusText);
-            }
-        } catch (error) {
-            console.error('Error adding code:', error);
-        }
+    const addCodeModal = document.getElementById('addCodeModal');
+    const codeDescriptionInput = document.getElementById('codeDescriptionInput');
+    const codeValueInput = document.getElementById('codeValueInput');
+    const codeExpiryInput = document.getElementById('codeExpiryInput');
+
+    // Clear previous values
+    codeDescriptionInput.value = '';
+    codeValueInput.value = '';
+    codeExpiryInput.value = ''; // Also clear the visual input of Flatpickr
+
+    // Store addressId in the modal's dataset to be accessible by the save button's event handler
+    addCodeModal.dataset.addressId = addressId;
+
+    // Destroy previous Flatpickr instance if it exists
+    if (window.codeExpiryFlatpickr) {
+        window.codeExpiryFlatpickr.destroy();
     }
+    // Initialize Flatpickr on the expiry input
+    window.codeExpiryFlatpickr = flatpickr(codeExpiryInput, {
+        enableTime: true,
+        dateFormat: "Y-m-d H:i", // Format for the actual input value (submitted)
+        altInput: true,          // Shows a human-friendly date in a new input field
+        altFormat: "F j, Y H:i", // How the human-friendly date will look
+    });
+
+    addCodeModal.style.display = 'block';
 }
 
 /**
