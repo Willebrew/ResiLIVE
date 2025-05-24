@@ -270,7 +270,7 @@ function requireApiKey(req, res, next) {
         next();
     } else {
         // Generic error message to avoid leaking information about the key's existence
-        res.status(401).json({ error: 'Unauthorized. Invalid or missing API Key.' });
+        return res.status(401).json({ error: 'Unauthorized. Invalid or missing API Key.' });
     }
 }
 
