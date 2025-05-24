@@ -104,8 +104,10 @@ app.use(cookieSession({
 app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
-    // CSP: allow self, inline scripts/styles (can be improved), data URIs for images, firebase connections. Disallow objects and framing from others.
-    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com;");
+    // CSP: allow self, nonce-based inline scripts/styles, data URIs for images, firebase connections. Disallow objects and framing from others.
+    const nonce = crypto.randomBytes(16).toString('base64'); // Generate a unique nonce for each request
+    res.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'nonce-${nonce}'; img-src 'self' data:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com;`);
+    res.locals.nonce = nonce; // Attach the nonce to the response object for use in templates or inline scripts
 
     if (process.env.NODE_ENV === 'production') {
         res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
