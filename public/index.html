@@ -55,7 +55,7 @@
             <h2>Communities</h2>
             <ul id="communityList"></ul>
             <!-- The original ID="12" button remains, so app.js won't break -->
-            <button class="add-btn" id="12" onclick="addCommunity()">+</button>
+            <button class="add-btn" id="12">+</button>
         </div>
 
         <div class="sidebar-bottom">
@@ -65,8 +65,8 @@
                 <select id="allowedUsersDropdown" multiple></select>
                 <input type="text" id="allowedUsersInput" placeholder="Add usernames here">
                 <div class="button-group">
-                    <button class="add-btn" onclick="updateAllowedUsers()">Add</button>
-                    <button class="remove-btn-user" onclick="removeSelectedUsers()">Remove</button>
+                    <button id="updateAllowedUsersBtn" class="add-btn">Add</button>
+                    <button id="removeSelectedUsersBtn" class="remove-btn-user">Remove</button>
                 </div>
             </div>
         </div>
@@ -98,8 +98,8 @@
     <div class="popup-content">
         <h2 id="logPopupTitle"></h2>
         <div id="logContent"></div>
-        <p class="popup-meta-info" style="font-size: 0.8em; text-align: center; margin-bottom: 10px;">Logs refresh automatically every 10 seconds. This window will auto-close after 5 minutes.</p>
-        <button class="close-btn-popup" onclick="closeLogPopup()">Close</button>
+        <p class="popup-meta-info">Logs refresh automatically every 10 seconds. This window will auto-close after 5 minutes.</p>
+        <button id="closeLogPopupBtn" class="close-btn-popup">Close</button>
     </div>
 </div>
 
@@ -111,9 +111,9 @@
         <div id="addUserForm">
             <input type="text" id="newUsername" placeholder="Username">
             <input type="password" id="newPassword" placeholder="Password">
-            <button class="add-btn2" onclick="addUser()">Add</button>
+            <button id="addUserBtn" class="add-btn2">Add</button>
         </div>
-        <button class="close-btn-popup" onclick="closeUsersPopup()">Close</button>
+        <button id="closeUsersPopupBtn" class="close-btn-popup">Close</button>
     </div>
 </div>
 
