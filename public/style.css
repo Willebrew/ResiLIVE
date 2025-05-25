@@ -530,19 +530,22 @@ h3 {
     margin-top: 0;
 }
 
-.close-btn-popup {
-    background-color: #555555;
-    color: #ffffff;
-    margin-top: 10px;
+.close-btn-popup { /* This styles the button with ID #cancelAddCodeBtn */
+    background-color: #555555; /* Existing grey background */
+    color: #ffffff; /* Existing white text */
     border: none;
-    border-radius: var(--btn-radius);
-    width: 60px;
-    height: 34px;
-    font-size: 0.85em;
+    border-radius: var(--btn-radius); /* Consistent pill shape */
     cursor: pointer;
+    font-size: 0.9em; /* Consistent font size */
+    padding: 8px 16px; /* Consistent padding for size */
+    transition: opacity 0.2s;
+    width: auto; /* Override original fixed width */
+    height: auto; /* Override original fixed height */
+    line-height: normal; /* Ensure text vertical alignment */
+    /* margin-top: 10px; /* This was an old rule; spacing is now handled by .popup-buttons gap */
 }
 
-.close-btn-popup:hover {
+.close-btn-popup:hover { /* Ensure hover effect is consistent */
     opacity: 0.8;
 }
 
@@ -676,4 +679,68 @@ h3 {
     .container {
         margin-left: 0;
     }
+}
+
+.popup-meta-info {
+    font-size: 0.8em;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+#addressDetails {
+    display: none;
+}
+
+.popup-buttons {
+    margin-top: 15px; /* Ensure this existing style is preserved or added */
+    display: flex;
+    justify-content: flex-end; /* Aligns buttons to the right */
+    gap: 10px; /* Provides space between the buttons */
+}
+
+/* Styling for input fields and labels within the Add Code Modal */
+#addCodeModal label {
+    display: block; /* Ensures label is on its own line */
+    margin-bottom: 5px; /* Space between label and input */
+    font-size: 0.9em;
+    color: var(--color-text); /* Assuming standard text color */
+}
+
+#addCodeModal input[type="text"] {
+    padding: 8px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius); /* Uses the --radius variable (10px) */
+    background-color: #111111; /* Consistent with other inputs like #addUserForm input */
+    color: var(--color-text);
+    font-size: 0.9em;
+    width: 100%; /* Makes input fields take the full width of their container */
+    margin-bottom: 15px; /* Space below each input field, increased slightly for better separation */
+}
+
+/* The #codeExpiryInput itself becomes hidden by Flatpickr when altInput is true.
+   Flatpickr creates a new visible input field. This new field is also an input[type="text"]
+   and should be covered by the rule above.
+   If Flatpickr adds a specific class to this visible alternate input,
+   like 'flatpickr-alt-input', you could target it with:
+   #addCodeModal .flatpickr-alt-input { ... }
+   However, the general input[type="text"] rule within #addCodeModal should suffice.
+*/
+
+/* Style the "Save Code" button (#saveCodeBtn) */
+#saveCodeBtn {
+    background-color: var(--color-btn-add-bg); /* Green */
+    color: var(--color-btn-add-text); /* Text color for green buttons (typically black or white) */
+    border: none;
+    border-radius: var(--btn-radius); /* Consistent pill shape */
+    cursor: pointer;
+    font-size: 0.9em; /* Consistent font size */
+    padding: 8px 16px; /* Consistent padding for size */
+    transition: opacity 0.2s;
+    width: auto; /* Remove fixed width if any */
+    height: auto; /* Remove fixed height if any */
+    line-height: normal; /* Ensure text vertical alignment */
+}
+
+#saveCodeBtn:hover {
+    opacity: 0.8;
 }
