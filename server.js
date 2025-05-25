@@ -3,6 +3,7 @@
  * @description This file contains the main server code for the application, including routes, middleware, and utility functions.
  */
 require('dotenv').config();
+const crypto = require('crypto');
 const express = require('express');
 const cookieSession = require('cookie-session');
 const admin = require('firebase-admin');
@@ -43,6 +44,14 @@ const limiter = RateLimit({
 
 app.set('trust proxy', 1);
 
+// Enforce HTTPS in production
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] !== 'https') {
+    return res.redirect(301, `https://${req.headers.host}${req.url}`);
+  }
+  next();
+});
+
 // Middleware setup
 app.use(express.json());
 app.use(express.static('public', {
@@ -50,17 +59,76 @@ app.use(express.static('public', {
 }));
 
 // Add cookie-session configuration
+const sessionSecret = process.env.SESSION_SECRET;
+const placeholderSecret = 'super-secret-key-please-change-this-silly';
+
+if (process.env.NODE_ENV === 'production') {
+    if (!sessionSecret || sessionSecret === placeholderSecret) {
+        console.error('FATAL ERROR: SESSION_SECRET is not defined or is set to the placeholder in production. Please set a strong, unique secret in your .env file.');
+        process.exit(1); // Exit the application
+    }
+} else {
+    // In development, if SESSION_SECRET is not set, use the placeholder and log a warning
+    if (!sessionSecret) {
+        console.warn('WARNING: SESSION_SECRET is not set. Using a placeholder secret for development. Set SESSION_SECRET in your .env file for better security.');
+    }
+}
+
+// API_SECRET_KEY configuration and validation
+// IMPORTANT: For production, API_SECRET_KEY must be a strong, unique, randomly generated string.
+// It should be different from other secrets like SESSION_SECRET.
+const apiSecretKey = process.env.API_SECRET_KEY;
+const commonApiPlaceholders = ['YOUR_API_SECRET_KEY_HERE', 'changeme', 'secret', 'ENTER_YOUR_API_KEY'];
+
+if (process.env.NODE_ENV === 'production') {
+    if (!apiSecretKey || apiSecretKey.trim() === '' || commonApiPlaceholders.includes(apiSecretKey)) {
+        console.error('FATAL ERROR: API_SECRET_KEY is not defined, is empty, or uses a common placeholder in production. Please set a strong, unique secret in your .env file.');
+        process.exit(1); // Exit the application
+    }
+} else {
+    // In development, if API_SECRET_KEY is not set or is a placeholder, log a warning
+    if (!apiSecretKey || commonApiPlaceholders.includes(apiSecretKey)) {
+        console.warn('WARNING: API_SECRET_KEY is not set or is using a placeholder. For production, ensure a strong, unique secret is set in your .env file.');
+    }
+}
+
 app.use(cookieSession({
     name: 'session',
-    keys: [process.env.SESSION_SECRET || 'your-secret-key'],
+    keys: [sessionSecret || placeholderSecret],
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'lax'
 }));
 
+// Security Headers Middleware
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    
+    const nonce = crypto.randomBytes(16).toString('base64');
+    res.locals.nonce = nonce; // Make nonce available for templates if needed
+
+    const cspDirectives = [
+        "default-src 'self'",
+        `script-src-elem 'self' https://cdn.jsdelivr.net 'nonce-${nonce}'`, // Allow self and scripts with the correct nonce
+        `style-src-elem 'self' https://cdn.jsdelivr.net 'nonce-${nonce}'`,  // Allow self and styles with the correct nonce
+        "img-src 'self' data:",              // Allow images from self and data URIs
+        "font-src 'self' https://www.perplexity.ai data:", // Allow fonts from self, perplexity.ai, and data URIs
+        "object-src 'none'",                 // Disallow plugins (Flash, etc.)
+        "frame-ancestors 'none'",            // Disallow embedding in iframes
+        "connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com" // Allowed connection sources
+    ];
+    res.setHeader('Content-Security-Policy', cspDirectives.join('; '));
+
+    if (process.env.NODE_ENV === 'production') {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
+});
+
 app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: process.env.NODE_ENV === 'production' ? process.env.CLIENT_ORIGIN_URL : 'http://localhost:3000',
     credentials: true
 }));
 
@@ -198,6 +266,25 @@ function requireAdmin(req, res, next) {
         next();
     } else {
         res.status(403).json({ error: 'Unauthorized. Admin access required.' });
+    }
+}
+
+/**
+ * Middleware to require API key authentication.
+ * It checks for the 'x-api-key' header and validates it against the API_SECRET_KEY.
+ * IMPORTANT: API_SECRET_KEY must be a strong, unique, randomly generated string for production.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next middleware function.
+ */
+function requireApiKey(req, res, next) {
+    const apiKey = req.headers['x-api-key']; // Or 'Authorization' if you prefer Bearer tokens
+    // Use the validated apiSecretKey from the startup check
+    if (apiKey && apiSecretKey && apiKey === apiSecretKey) {
+        next();
+    } else {
+        // Generic error message to avoid leaking information about the key's existence
+        res.status(401).json({ error: 'Unauthorized. Invalid or missing API Key.' });
     }
 }
 
@@ -801,7 +888,7 @@ async function logAccess(communityName, playerName, action) {
 }
 
 // Route to log access to a community
-app.post('/api/log-access', async (req, res) => {
+app.post('/api/log-access', requireApiKey, async (req, res) => {
     const { community, player, action } = req.body;
 
     try {
@@ -1047,7 +1134,7 @@ async function removeExpiredCodes() {
 setInterval(removeExpiredCodes, 60000);
 
 // Route to serve the main API data file
-app.get('/api', limiter, async (req, res) => {
+app.get('/api', limiter, requireApiKey, async (req, res) => {
     try {
         const snapshot = await db.collection('communities').get();
         const communities = snapshot.docs.map(doc => ({

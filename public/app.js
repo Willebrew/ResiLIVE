@@ -45,6 +45,7 @@ let currentUserId = null;
  * @type {null}
  */
 let currentUsername = null;
+window.codeExpiryFlatpickr = null; // For Flatpickr instance
 
 /**
  * Event listener for the DOMContentLoaded event to fetch the CSRF token when the document is fully loaded.
@@ -183,6 +184,119 @@ function setupUIEventListeners() {
     if (addAddressBtn) {
         addAddressBtn.addEventListener('click', addAddress);
     }
+
+    // Refactored popup button event listeners
+    const closeLogPopupBtn = document.getElementById('closeLogPopupBtn');
+    if (closeLogPopupBtn) {
+        closeLogPopupBtn.addEventListener('click', closeLogPopup);
+    }
+
+    const addUserBtn = document.getElementById('addUserBtn');
+    if (addUserBtn) {
+        addUserBtn.addEventListener('click', addUser);
+    }
+
+    const closeUsersPopupBtn = document.getElementById('closeUsersPopupBtn');
+    if (closeUsersPopupBtn) {
+        closeUsersPopupBtn.addEventListener('click', closeUsersPopup);
+    }
+
+    // Refactored sidebar button event listeners
+    const addCommunityBtn = document.getElementById('12'); // This is the button with id '12'
+    if (addCommunityBtn) {
+        addCommunityBtn.addEventListener('click', addCommunity);
+    }
+
+    const updateAllowedUsersBtn = document.getElementById('updateAllowedUsersBtn');
+    if (updateAllowedUsersBtn) {
+        updateAllowedUsersBtn.addEventListener('click', updateAllowedUsers);
+    }
+
+    const removeSelectedUsersBtn = document.getElementById('removeSelectedUsersBtn');
+    if (removeSelectedUsersBtn) {
+        removeSelectedUsersBtn.addEventListener('click', removeSelectedUsers);
+    }
+
+    // Event listener for "Save Code" button in the Add Code Modal
+    const saveCodeBtn = document.getElementById('saveCodeBtn');
+    if (saveCodeBtn) {
+        saveCodeBtn.addEventListener('click', async () => {
+            const addCodeModal = document.getElementById('addCodeModal');
+            const addressId = addCodeModal.dataset.addressId; // Retrieve stored addressId
+            const description = document.getElementById('codeDescriptionInput').value;
+            const codeValue = document.getElementById('codeValueInput').value; // Renamed to avoid conflict
+            const expiryDateInstance = window.codeExpiryFlatpickr; // Get the flatpickr instance
+
+            if (!expiryDateInstance || expiryDateInstance.selectedDates.length === 0) {
+                alert('Please select an expiration date and time.');
+                return;
+            }
+            const expiresAt = expiryDateInstance.selectedDates[0].toISOString();
+
+            if (description && codeValue && expiresAt && addressId) {
+                try {
+                    // Ensure selectedCommunity and selectedCommunity.id are valid
+                    if (!selectedCommunity || !selectedCommunity.id) {
+                        alert('Error: No community selected. Cannot add code.');
+                        console.error('Error: selectedCommunity or selectedCommunity.id is not set.');
+                        return;
+                    }
+                    const response = await fetch(`/api/communities/${selectedCommunity.id}/addresses/${addressId}/codes`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken
+                        },
+                        body: JSON.stringify({ description, code: codeValue, expiresAt }),
+                        credentials: 'include'
+                    });
+                    if (response.ok) {
+                        const newCode = await response.json();
+                        const address = selectedCommunity.addresses.find(a => a.id === addressId);
+                        if (address) {
+                            if (!address.codes) {
+                                address.codes = [];
+                            }
+                            address.codes.push(newCode);
+                            renderCodes(address); // Re-render codes for that specific address
+                        }
+                        addCodeModal.style.display = 'none'; // Hide modal
+                        delete addCodeModal.dataset.addressId; // Clean up dataset
+                    } else {
+                        const errorData = await response.json();
+                        console.error('Failed to add code:', errorData.error || response.statusText);
+                        alert('Failed to add code: ' + (errorData.error || response.statusText));
+                    }
+                } catch (error) {
+                    console.error('Error adding code:', error);
+                    alert('An error occurred while adding the code.');
+                }
+            } else {
+                alert('Please fill in all fields: description, code, and expiration date.');
+            }
+        });
+    }
+
+    // Event listener for "Cancel" button in the Add Code Modal
+    const cancelAddCodeBtn = document.getElementById('cancelAddCodeBtn');
+    if (cancelAddCodeBtn) {
+        cancelAddCodeBtn.addEventListener('click', () => {
+            const addCodeModal = document.getElementById('addCodeModal');
+            const codeDescriptionInput = document.getElementById('codeDescriptionInput');
+            const codeValueInput = document.getElementById('codeValueInput');
+            
+            // Clear fields
+            codeDescriptionInput.value = '';
+            codeValueInput.value = '';
+            if (window.codeExpiryFlatpickr) {
+                window.codeExpiryFlatpickr.clear();
+            }
+            
+            addCodeModal.style.display = 'none';
+            // Clean up dataset
+            delete addCodeModal.dataset.addressId; 
+        });
+    }
 }
 
 /**
@@ -249,22 +363,34 @@ async function toggleUserRole(userId) {
  */
 function renderUsers() {
     const usersList = document.getElementById('usersList');
-    usersList.innerHTML = '';
+    usersList.innerHTML = ''; // Clear existing list items
     users.forEach(user => {
         if (user.id !== currentUserId && user.role !== 'superuser') {
             const userElement = document.createElement('div');
             userElement.className = 'user-item';
-            userElement.innerHTML = `
-                <span>${user.username}</span>
-                <div class="user-controls">
-                    <button onclick="toggleUserRole('${user.id}')"
-                            class="role-btn ${user.role === 'admin' ? 'admin' : 'user'}"
-                            title="${user.role === 'admin' ? 'Remove admin' : 'Make admin'}">
-                        ${user.role === 'admin' ? '👑' : '👤'}
-                    </button>
-                    <button onclick="removeUser('${user.id}')" class="remove-btn">-</button>
-                </div>
-            `;
+
+            const usernameSpan = document.createElement('span');
+            usernameSpan.textContent = user.username;
+            userElement.appendChild(usernameSpan);
+
+            const controlsDiv = document.createElement('div');
+            controlsDiv.className = 'user-controls';
+
+            const roleButton = document.createElement('button');
+            roleButton.className = `role-btn ${user.role === 'admin' ? 'admin' : 'user'}`;
+            roleButton.title = user.role === 'admin' ? 'Remove admin' : 'Make admin';
+            roleButton.textContent = user.role === 'admin' ? '👑' : '👤';
+            roleButton.addEventListener('click', () => toggleUserRole(user.id));
+            controlsDiv.appendChild(roleButton);
+
+            const removeUserButton = document.createElement('button');
+            removeUserButton.className = 'remove-btn';
+            removeUserButton.textContent = '-';
+            removeUserButton.title = 'Remove user';
+            removeUserButton.addEventListener('click', () => removeUser(user.id));
+            controlsDiv.appendChild(removeUserButton);
+
+            userElement.appendChild(controlsDiv);
             usersList.appendChild(userElement);
         }
     });
@@ -451,13 +577,29 @@ function showLogs(communityName) {
         alert('No community selected');
         return;
     }
+    if (window.logUpdateInterval) { clearInterval(window.logUpdateInterval); } // Clear existing refresh interval
     document.getElementById('logPopupTitle').textContent = `Logs for ${communityName}`;
     document.getElementById('logPopup').style.display = 'block';
     updateLogs(communityName);
-    if (window.logUpdateInterval) {
-        clearInterval(window.logUpdateInterval);
+
+    // Set an interval to refresh logs every 10 seconds if the popup is still open
+    window.logUpdateInterval = setInterval(() => {
+        if (document.getElementById('logPopup').style.display === 'block') {
+            updateLogs(communityName);
+        } else {
+            // If popup was closed by other means, clear this interval
+            if(window.logUpdateInterval) clearInterval(window.logUpdateInterval);
+        }
+    }, 10000); // 10 seconds
+
+    // Automatically close the log popup after 5 minutes
+    if (window.logPopupTimeout) {
+        clearTimeout(window.logPopupTimeout);
     }
-    window.logUpdateInterval = setInterval(() => updateLogs(communityName), 5000);
+    window.logPopupTimeout = setTimeout(() => {
+        console.log('Log popup automatically closing due to timeout.');
+        closeLogPopup();
+    }, 5 * 60 * 1000); // 5 minutes
 }
 
 /**
@@ -469,12 +611,13 @@ function showUsersPopup() {
 }
 
 /**
- * Closes the log popup and clears the log update interval.
+ * Closes the log popup and clears the log update interval and auto-close timeout.
  */
 function closeLogPopup() {
+    if (window.logPopupTimeout) { clearTimeout(window.logPopupTimeout); } // Clear auto-close timeout
     document.getElementById('logPopup').style.display = 'none';
     if (window.logUpdateInterval) {
-        clearInterval(window.logUpdateInterval);
+        clearInterval(window.logUpdateInterval); // Clear any potential polling interval
     }
 }
 
@@ -538,20 +681,30 @@ function displayLogs(logs) {
  */
 function renderCommunities() {
     const communityList = document.getElementById('communityList');
-    communityList.innerHTML = '';
+    communityList.innerHTML = ''; // Clear existing list items
     communities.forEach(community => {
         const li = document.createElement('li');
-        // If admin, use a smaller remove button that displays an "×" instead of the text "Remove"
-        li.innerHTML = `
-            ${isAdmin ? `<button class="remove-btn-sidebar" onclick="removeCommunity('${community.id}')">&times;</button>` : ''}
-            <span>${community.name}</span>
-        `;
-        li.onclick = (event) => {
-            // Prevent the click from firing when clicking the remove button
-            if (event.target !== li.querySelector('.remove-btn-sidebar')) {
-                selectCommunity(community.id);
-            }
-        };
+
+        if (isAdmin) {
+            const removeButton = document.createElement('button');
+            removeButton.className = 'remove-btn-sidebar';
+            removeButton.innerHTML = '&times;'; // Use innerHTML for HTML entities like &times;
+            removeButton.title = 'Remove community';
+            removeButton.addEventListener('click', (event) => {
+                event.stopPropagation(); // Prevent li click event from firing
+                removeCommunity(community.id);
+            });
+            li.appendChild(removeButton);
+        }
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = community.name;
+        li.appendChild(nameSpan);
+
+        li.addEventListener('click', () => {
+            selectCommunity(community.id);
+        });
+
         if (selectedCommunity && community.id === selectedCommunity.id) {
             li.classList.add('active');
         }
@@ -577,7 +730,8 @@ function selectCommunity(communityId) {
  */
 function renderAddresses() {
     const addressList = document.getElementById('addressList');
-    addressList.innerHTML = '';
+    addressList.innerHTML = ''; // Clear existing list items
+
     if (selectedCommunity && selectedCommunity.addresses) {
         selectedCommunity.addresses.forEach(address => {
             const li = document.createElement('li');
@@ -585,28 +739,72 @@ function renderAddresses() {
             if (address.isNew) {
                 li.classList.add('new-address');
                 setTimeout(() => {
-                    delete address.isNew;
+                    // address.isNew is a temporary client-side flag, no need to persist this change via API
+                    const currentAddress = selectedCommunity.addresses.find(a => a.id === address.id);
+                    if (currentAddress) delete currentAddress.isNew;
+                    li.classList.remove('new-address'); // Also remove the class after timeout
                 }, 300);
             }
-            li.innerHTML = `
-                <div class="address-main">
-                    <button class="remove-btn" onclick="removeAddress('${address.id}')">Remove</button>
-                    <span class="address-text" onclick="toggleAddressDetails('${address.id}')">${address.street}</span>
-                </div>
-                <div class="address-details" id="details-${address.id}">
-                    <div class="user-ids">
-                        <h4>User IDs:</h4>
-                        <ul class="user-id-list"></ul>
-                        <button class="add-btn" onclick="addUserId('${address.id}')">Add User ID</button>
-                    </div>
-                    <div class="codes">
-                        <h4>Codes:</h4>
-                        <ul class="code-list"></ul>
-                        <button class="add-btn" onclick="addCode('${address.id}')">Add Code</button>
-                    </div>
-                </div>
-            `;
+
+            // Create address-main div
+            const addressMainDiv = document.createElement('div');
+            addressMainDiv.className = 'address-main';
+
+            const removeAddressBtn = document.createElement('button');
+            removeAddressBtn.className = 'remove-btn';
+            removeAddressBtn.textContent = 'Remove';
+            removeAddressBtn.addEventListener('click', () => removeAddress(address.id));
+            addressMainDiv.appendChild(removeAddressBtn);
+
+            const addressTextSpan = document.createElement('span');
+            addressTextSpan.className = 'address-text';
+            addressTextSpan.textContent = address.street;
+            addressTextSpan.addEventListener('click', () => toggleAddressDetails(address.id));
+            addressMainDiv.appendChild(addressTextSpan);
+
+            li.appendChild(addressMainDiv);
+
+            // Create address-details div
+            const addressDetailsDiv = document.createElement('div');
+            addressDetailsDiv.className = 'address-details';
+            addressDetailsDiv.id = `details-${address.id}`;
+
+            // User IDs section
+            const userIdsDiv = document.createElement('div');
+            userIdsDiv.className = 'user-ids';
+            const userIdsH4 = document.createElement('h4');
+            userIdsH4.textContent = 'User IDs:';
+            userIdsDiv.appendChild(userIdsH4);
+            const userIdListUl = document.createElement('ul');
+            userIdListUl.className = 'user-id-list';
+            userIdsDiv.appendChild(userIdListUl); // ul will be populated by renderUserIds
+            const addUserIdBtn = document.createElement('button');
+            addUserIdBtn.className = 'add-btn';
+            addUserIdBtn.textContent = 'Add User ID';
+            addUserIdBtn.addEventListener('click', () => addUserId(address.id));
+            userIdsDiv.appendChild(addUserIdBtn);
+            addressDetailsDiv.appendChild(userIdsDiv);
+
+            // Codes section
+            const codesDiv = document.createElement('div');
+            codesDiv.className = 'codes';
+            const codesH4 = document.createElement('h4');
+            codesH4.textContent = 'Codes:';
+            codesDiv.appendChild(codesH4);
+            const codeListUl = document.createElement('ul');
+            codeListUl.className = 'code-list';
+            codesDiv.appendChild(codeListUl); // ul will be populated by renderCodes
+            const addCodeBtn = document.createElement('button');
+            addCodeBtn.className = 'add-btn';
+            addCodeBtn.textContent = 'Add Code';
+            addCodeBtn.addEventListener('click', () => addCode(address.id));
+            codesDiv.appendChild(addCodeBtn);
+            addressDetailsDiv.appendChild(codesDiv);
+
+            li.appendChild(addressDetailsDiv);
             addressList.appendChild(li);
+
+            // Call renderUserIds and renderCodes to populate the respective lists
             renderUserIds(address);
             renderCodes(address);
         });
@@ -628,14 +826,24 @@ function toggleAddressDetails(addressId) {
  */
 function renderUserIds(address) {
     const userIdList = document.querySelector(`#details-${address.id} .user-id-list`);
-    userIdList.innerHTML = '';
+    if (!userIdList) return; // Guard against null if the structure isn't ready
+    userIdList.innerHTML = ''; // Clear existing items
+
     if (address.people) {
         address.people.forEach(person => {
             const li = document.createElement('li');
-            li.innerHTML = `
-                <button class="remove-btn" onclick="removeUserId('${address.id}', '${person.id}')">-</button>
-                <span>${person.username} (Player ID: ${person.playerId})</span>
-            `;
+
+            const removePersonBtn = document.createElement('button');
+            removePersonBtn.className = 'remove-btn';
+            removePersonBtn.textContent = '-';
+            removePersonBtn.title = `Remove user ${person.username}`;
+            removePersonBtn.addEventListener('click', () => removeUserId(address.id, person.id));
+            li.appendChild(removePersonBtn);
+
+            const personDetailsSpan = document.createElement('span');
+            personDetailsSpan.textContent = `${person.username} (Player ID: ${person.playerId})`;
+            li.appendChild(personDetailsSpan);
+
             userIdList.appendChild(li);
         });
     }
@@ -647,14 +855,24 @@ function renderUserIds(address) {
  */
 function renderCodes(address) {
     const codeList = document.querySelector(`#details-${address.id} .code-list`);
-    codeList.innerHTML = '';
+    if (!codeList) return; // Guard against null
+    codeList.innerHTML = ''; // Clear existing items
+
     if (address.codes) {
         address.codes.forEach(code => {
             const li = document.createElement('li');
-            li.innerHTML = `
-                <button class="remove-btn" onclick="removeCode('${address.id}', '${code.id}')">-</button>
-                <span>${code.description} (Code: ${code.code}, Expires: ${new Date(code.expiresAt).toLocaleString()})</span>
-            `;
+
+            const removeCodeBtn = document.createElement('button');
+            removeCodeBtn.className = 'remove-btn';
+            removeCodeBtn.textContent = '-';
+            removeCodeBtn.title = `Remove code ${code.description}`;
+            removeCodeBtn.addEventListener('click', () => removeCode(address.id, code.id));
+            li.appendChild(removeCodeBtn);
+
+            const codeDetailsSpan = document.createElement('span');
+            codeDetailsSpan.textContent = `${code.description} (Code: ${code.code}, Expires: ${new Date(code.expiresAt).toLocaleString()})`;
+            li.appendChild(codeDetailsSpan);
+
             codeList.appendChild(li);
         });
     }
@@ -911,36 +1129,32 @@ async function removeUserId(addressId, userIdId) {
  * @param {string} addressId - The ID of the address.
  */
 async function addCode(addressId) {
-    const address = selectedCommunity.addresses.find(a => a.id === addressId);
-    if (!address) return;
-    const description = prompt('Enter code description:');
-    const code = prompt('Enter code:');
-    const expiresAt = prompt('Enter expiration date and time (YYYY-MM-DD HH:MM):');
-    if (description && code && expiresAt) {
-        try {
-            const response = await fetch(`/api/communities/${selectedCommunity.id}/addresses/${addressId}/codes`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': csrfToken
-                },
-                body: JSON.stringify({ description, code, expiresAt: new Date(expiresAt).toISOString() }),
-                credentials: 'include'
-            });
-            if (response.ok) {
-                const newCode = await response.json();
-                if (!address.codes) {
-                    address.codes = [];
-                }
-                address.codes.push(newCode);
-                renderCodes(address);
-            } else {
-                console.error('Failed to add code:', response.statusText);
-            }
-        } catch (error) {
-            console.error('Error adding code:', error);
-        }
+    const addCodeModal = document.getElementById('addCodeModal');
+    const codeDescriptionInput = document.getElementById('codeDescriptionInput');
+    const codeValueInput = document.getElementById('codeValueInput');
+    const codeExpiryInput = document.getElementById('codeExpiryInput');
+
+    // Clear previous values
+    codeDescriptionInput.value = '';
+    codeValueInput.value = '';
+    codeExpiryInput.value = ''; // Also clear the visual input of Flatpickr
+
+    // Store addressId in the modal's dataset to be accessible by the save button's event handler
+    addCodeModal.dataset.addressId = addressId;
+
+    // Destroy previous Flatpickr instance if it exists
+    if (window.codeExpiryFlatpickr) {
+        window.codeExpiryFlatpickr.destroy();
     }
+    // Initialize Flatpickr on the expiry input
+    window.codeExpiryFlatpickr = flatpickr(codeExpiryInput, {
+        enableTime: true,
+        dateFormat: "Y-m-d H:i", // Format for the actual input value (submitted)
+        altInput: true,          // Shows a human-friendly date in a new input field
+        altFormat: "F j, Y H:i", // How the human-friendly date will look
+    });
+
+    addCodeModal.style.display = 'block';
 }
 
 /**
