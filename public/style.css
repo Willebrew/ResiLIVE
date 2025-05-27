@@ -744,3 +744,46 @@ h3 {
 #saveCodeBtn:hover {
     opacity: 0.8;
 }
+
+/********************************************************
+  OPEN GATE BUTTONS
+*********************************************************/
+.community-open-gate-btn {
+    background-color: var(--color-btn-primary-bg); /* from .topnav-btn */
+    color: var(--color-btn-primary-text);       /* from .topnav-btn */
+    border: none;                               /* from .topnav-btn */
+    border-radius: var(--btn-radius);           /* from .topnav-btn */
+    cursor: pointer;                            /* from .topnav-btn */
+    padding: 8px 16px;                          /* from .topnav-btn */
+    font-size: 0.9em;                           /* from .topnav-btn */
+    transition: background-color 0.3s;          /* from .topnav-btn */
+    display: inline-block;                      /* For positioning */
+    margin-left: 10px;                          /* Space from community name */
+    vertical-align: middle;                     /* Align with H2 text */
+}
+
+.community-open-gate-btn:hover {
+    background-color: #e8e8e8; /* from .topnav-btn:hover */
+}
+
+/*
+  Style for the "Open Gate for Address" button.
+  Using button.address-open-gate-btn for added specificity to override .add-btn if both are present.
+*/
+button.address-open-gate-btn {
+    background-color: var(--color-btn-primary-bg); /* Override .add-btn green */
+    color: var(--color-btn-primary-text);       /* Override .add-btn text */
+    border: none;                               /* Consistent with .topnav-btn */
+    border-radius: var(--btn-radius);           /* Consistent with .topnav-btn */
+    cursor: pointer;                            /* Consistent with .topnav-btn */
+    padding: 6px 12px;                          /* Matched to .add-btn for size consistency */
+    font-size: 0.85em;                          /* Matched to .add-btn for size consistency */
+    transition: background-color 0.3s, opacity 0.2s; /* Combine transitions */
+    margin-top: 10px;                           /* Space above this button in address details */
+    display: inline-block;                      /* Allow it to sit alongside other .add-btn if any, or be sized by content */
+}
+
+button.address-open-gate-btn:hover {
+    background-color: #e8e8e8; /* Consistent hover from .topnav-btn */
+    opacity: 0.8; /* Keep opacity hover if it was also an .add-btn */
+}

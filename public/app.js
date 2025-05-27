@@ -720,9 +720,69 @@ function selectCommunity(communityId) {
     selectedCommunity = communities.find(c => c.id === communityId);
     selectedAddress = null;
     renderAddresses();
-    document.getElementById('communityName').textContent = selectedCommunity.name;
+
+    const communityNameElement = document.getElementById('communityName');
+    communityNameElement.textContent = selectedCommunity.name;
+
+    // Remove existing open gate button if any
+    const existingOpenGateBtn = document.getElementById('communityOpenGateBtn');
+    if (existingOpenGateBtn) {
+        existingOpenGateBtn.remove();
+    }
+
+    // Create and add the "Open Gate" button
+    if (selectedCommunity) { // Only add if a community is truly selected
+        const openGateBtn = document.createElement('button');
+        openGateBtn.textContent = 'Open Gate';
+        openGateBtn.className = 'community-open-gate-btn'; // For styling
+        openGateBtn.id = 'communityOpenGateBtn'; // For removal
+        openGateBtn.addEventListener('click', () => openCommunityGate(selectedCommunity.name));
+        
+        // Insert the button after the H2 element for community name
+        communityNameElement.parentNode.insertBefore(openGateBtn, communityNameElement.nextSibling);
+    }
+
     renderCommunities();
     renderAllowedUsers();
+}
+
+/**
+ * Sends a command to open the gate for the specified community.
+ * @param {string} communityName - The name of the community.
+ */
+async function openCommunityGate(communityName) {
+    if (!communityName) {
+        alert('No community specified for opening the gate.');
+        return;
+    }
+
+    if (!csrfToken) {
+        alert('CSRF token not available. Please refresh the page.');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/command/open-gate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ community: communityName }),
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            alert(data.message || `Gate command sent for ${communityName}`);
+        } else {
+            const errorData = await response.json();
+            alert(`Failed to send gate command: ${errorData.error || response.statusText}`);
+        }
+    } catch (error) {
+        console.error('Error sending gate command:', error);
+        alert('An error occurred while sending the gate command. Please check the console for details.');
+    }
 }
 
 /**
@@ -807,7 +867,56 @@ function renderAddresses() {
             // Call renderUserIds and renderCodes to populate the respective lists
             renderUserIds(address);
             renderCodes(address);
+
+            // Add "Open Gate" button if address.hasGate is true
+            if (address.hasGate === true) {
+                const openGateAddressBtn = document.createElement('button');
+                openGateAddressBtn.textContent = 'Open Gate for Address';
+                openGateAddressBtn.className = 'add-btn address-open-gate-btn'; // Using 'add-btn' for existing styling, plus a specific class
+                openGateAddressBtn.addEventListener('click', () => openAddressGate(selectedCommunity.name, address.street));
+                addressDetailsDiv.appendChild(openGateAddressBtn); // Append to the details section
+            }
         });
+    }
+}
+
+/**
+ * Sends a command to open the gate for a specific address within a community.
+ * @param {string} communityName - The name of the community.
+ * @param {string} streetAddress - The street address for which to open the gate.
+ */
+async function openAddressGate(communityName, streetAddress) {
+    if (!communityName || !streetAddress) {
+        alert('Community name and street address are required for opening the gate.');
+        return;
+    }
+
+    if (!csrfToken) {
+        alert('CSRF token not available. Please refresh the page.');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/command/open-gate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ community: communityName, address: streetAddress }),
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            alert(data.message || `Gate command sent for ${streetAddress} in ${communityName}`);
+        } else {
+            const errorData = await response.json();
+            alert(`Failed to send gate command for address: ${errorData.error || response.statusText}`);
+        }
+    } catch (error) {
+        console.error('Error sending address gate command:', error);
+        alert('An error occurred while sending the address gate command. Please check the console.');
     }
 }
 
@@ -1003,6 +1112,7 @@ async function addAddress() {
     if (!selectedCommunity) return;
     const street = prompt('Enter address:');
     if (street) {
+        const hasGate = confirm('Does this address have a gate?'); // Added this line
         try {
             const response = await fetch(`/api/communities/${selectedCommunity.id}/addresses`, {
                 method: 'POST',
@@ -1010,7 +1120,7 @@ async function addAddress() {
                     'Content-Type': 'application/json',
                     'X-CSRF-Token': csrfToken
                 },
-                body: JSON.stringify({ street }),
+                body: JSON.stringify({ street, hasGate }), // Modified this line
                 credentials: 'include'
             });
             if (!response.ok) {
@@ -1260,4 +1370,4 @@ function removeSelectedUsers() {
 }
 
 // Fetch initial CSRF token and data (already set up in DOMContentLoaded above)
-fetchData();
+// fetchData(); // Called by checkLoginStatus
