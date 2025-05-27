@@ -443,15 +443,15 @@ main {
 
 /* Styles for the community action menu dropdown */
 #communityActionMenu {
-    position: absolute; /* Positioned by JS */
-    z-index: 100;
+    position: absolute; /* Initial position, might be refined by JS if .community-action-menu-positioned is used */
+    /* z-index: 100; Will be handled by .community-action-menu-positioned */
     background-color: var(--color-card);
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
     padding: 10px;
     min-width: 200px; /* Ensure enough width for options */
     box-shadow: 0 4px 12px rgba(0,0,0,0.5); /* More pronounced shadow */
-    display: none; /* Initially hidden */
+    /* display: none; /* This line is removed, .hidden class in HTML will hide it */
 }
 
 #communityActionMenu ul {
@@ -587,7 +587,7 @@ h3 {
   POPUPS / MODALS
 *********************************************************/
 .popup {
-    display: none;
+    display: none; /* Default state for popups */
     position: fixed;
     z-index: 1000;
     left: 0;
@@ -887,4 +887,28 @@ button.address-open-gate-btn:hover {
 
 #confirmHasGateYesBtn:hover {
     opacity: 0.8;
+}
+
+/********************************************************
+  CSP UTILITY CLASSES
+*********************************************************/
+.hidden {
+    display: none !important;
+}
+
+/* .visible class might be used for elements that need a specific display type 
+   other than their default when un-hidden, e.g. display: flex.
+   For simple block, removing .hidden might be enough. */
+.visible {
+    display: block !important; 
+}
+
+.popup-visible {
+    display: block !important; /* For popups that are display:none by default via .popup */
+}
+
+.community-action-menu-positioned {
+    position: absolute;
+    z-index: 100; 
+    /* top, left will be set by JS if still needed, or handled by more specific positioning logic if possible */
 }
