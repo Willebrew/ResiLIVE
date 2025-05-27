@@ -771,19 +771,39 @@ h3 {
   Using button.address-open-gate-btn for added specificity to override .add-btn if both are present.
 */
 button.address-open-gate-btn {
-    background-color: var(--color-btn-primary-bg); /* Override .add-btn green */
-    color: var(--color-btn-primary-text);       /* Override .add-btn text */
-    border: none;                               /* Consistent with .topnav-btn */
-    border-radius: var(--btn-radius);           /* Consistent with .topnav-btn */
-    cursor: pointer;                            /* Consistent with .topnav-btn */
-    padding: 6px 12px;                          /* Matched to .add-btn for size consistency */
-    font-size: 0.85em;                          /* Matched to .add-btn for size consistency */
-    transition: background-color 0.3s, opacity 0.2s; /* Combine transitions */
-    margin-top: 10px;                           /* Space above this button in address details */
-    display: inline-block;                      /* Allow it to sit alongside other .add-btn if any, or be sized by content */
+    background-color: var(--color-btn-primary-bg); /* White background */
+    color: var(--color-btn-primary-text);       /* Black text */
+    border: none;                               /* No border, matches .add-btn */
+    border-radius: var(--btn-radius);           /* Pill shape, matches .add-btn */
+    cursor: pointer;                            /* Standard pointer */
+    padding: 6px 12px;                          /* Matches .add-btn size */
+    font-size: 0.85em;                          /* Matches .add-btn size */
+    transition: background-color 0.3s, opacity 0.2s; /* Standard transitions */
+    display: block;                             /* Block display for vertical stacking */
+    margin-top: 10px;                           /* Space above this button */
+    margin-left: 0;                             /* Ensure no unintended left margin */
+    margin-right: 0;                            /* Ensure no unintended right margin */
+    text-align: center;                         /* Center text if button takes full width of its parent in some cases */
+    width: auto; /* Allow button to size to content + padding, or set a specific width if needed */
 }
 
 button.address-open-gate-btn:hover {
-    background-color: #e8e8e8; /* Consistent hover from .topnav-btn */
-    opacity: 0.8; /* Keep opacity hover if it was also an .add-btn */
+    background-color: #e8e8e8; /* Slightly darker white on hover, like .topnav-btn */
+    opacity: 0.8; /* Retain opacity effect if needed */
+}
+
+/* Styling for the custom confirmation modal buttons */
+#confirmHasGateYesBtn {
+    background-color: var(--color-btn-add-bg); /* Green */
+    color: var(--color-btn-add-text);
+    border: none;
+    border-radius: var(--btn-radius);
+    cursor: pointer;
+    font-size: 0.9em;
+    padding: 8px 16px;
+    transition: opacity 0.2s;
+}
+
+#confirmHasGateYesBtn:hover {
+    opacity: 0.8;
 }
