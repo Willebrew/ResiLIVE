@@ -82,27 +82,31 @@ async function fetchCsrfToken() {
  */
 function updateCommunityMenuView() {
     const communityMenuBtn = document.getElementById('communityMenuBtn');
-    const communityActionMenu = document.getElementById('communityActionMenu');
+    const communityActionMenu = document.getElementById('communityActionMenu'); 
+    const communityOpenGateMenuBtnContainer = document.getElementById('communityOpenGateMenuBtnContainer'); 
 
     if (!selectedCommunity) {
-        if (communityMenuBtn) communityMenuBtn.style.display = 'none';
-        if (communityActionMenu) communityActionMenu.style.display = 'none'; // Also hide the menu itself
+        if (communityMenuBtn) communityMenuBtn.classList.add('hidden');
+        if (communityActionMenu) {
+            communityActionMenu.classList.add('hidden');
+            communityActionMenu.classList.remove('community-action-menu-positioned');
+        }
+        // Ensure the gate button container is also hidden if no community
+        if (communityOpenGateMenuBtnContainer) communityOpenGateMenuBtnContainer.classList.add('hidden'); 
         return;
     }
 
-    // Ensure button is visible if a community is selected, menu itself might be hidden or visible
-    if (communityMenuBtn) communityMenuBtn.style.display = 'inline-block';
+    // If a community is selected, the menu button should be visible
+    if (communityMenuBtn) communityMenuBtn.classList.remove('hidden');
 
     const remoteGateControlToggle = document.getElementById('remoteGateControlToggle');
-    const communityOpenGateMenuBtnContainer = document.getElementById('communityOpenGateMenuBtnContainer');
-
     if (remoteGateControlToggle) {
-        // Ensure selectedCommunity.remoteGateControlEnabled is treated as a boolean
         remoteGateControlToggle.checked = !!selectedCommunity.remoteGateControlEnabled;
     }
 
     if (communityOpenGateMenuBtnContainer) {
-        communityOpenGateMenuBtnContainer.style.display = selectedCommunity.remoteGateControlEnabled ? 'list-item' : 'none';
+        // Use toggle for cleaner add/remove based on condition
+        communityOpenGateMenuBtnContainer.classList.toggle('hidden', !selectedCommunity.remoteGateControlEnabled);
     }
 }
 
@@ -134,10 +138,10 @@ async function checkLoginStatus() {
             currentUserId = data.userId;
             updateUserName(data.username);
             isAdmin = data.role === 'admin' || data.role === 'superuser';
+            const allowedUsersManagement = document.getElementById('allowedUsersManagement');
             if (isAdmin) {
-                document.getElementById('allowedUsersManagement').style.display = 'block';
+                if (allowedUsersManagement) allowedUsersManagement.classList.remove('hidden'); // CSP Refactor
             } else {
-                const allowedUsersManagement = document.getElementById('allowedUsersManagement');
                 if (allowedUsersManagement) {
                     allowedUsersManagement.remove();
                 }
@@ -220,24 +224,29 @@ function setupUIEventListeners() {
 
     if (communityMenuBtn && communityActionMenu) {
         communityMenuBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent click from closing menu immediately
-            const isVisible = communityActionMenu.style.display === 'block';
-            communityActionMenu.style.display = isVisible ? 'none' : 'block';
-            if (!isVisible) {
-                // Position menu next to the button
+            e.stopPropagation(); 
+            const isActuallyHidden = communityActionMenu.classList.contains('hidden');
+            if (isActuallyHidden) {
+                communityActionMenu.classList.remove('hidden');
+                communityActionMenu.classList.add('community-action-menu-positioned');
+                // Dynamic positioning (Keep as per instructions)
                 const btnRect = communityMenuBtn.getBoundingClientRect();
-                // Position below the button, aligning left edges
-                communityActionMenu.style.left = btnRect.left + 'px';
+                communityActionMenu.style.left = btnRect.left + 'px'; 
                 communityActionMenu.style.top = btnRect.bottom + 'px'; 
+            } else {
+                communityActionMenu.classList.add('hidden');
+                communityActionMenu.classList.remove('community-action-menu-positioned');
             }
         });
 
         // Hide menu when clicking outside
         document.addEventListener('click', (evt) => {
-            if (communityActionMenu.style.display === 'block' &&
-                !communityActionMenu.contains(evt.target) &&
-                evt.target !== communityMenuBtn) {
-                communityActionMenu.style.display = 'none';
+            // Check if the menu is currently visible (not hidden)
+            if (!communityActionMenu.classList.contains('hidden') &&
+                !communityActionMenu.contains(evt.target) && // Click is not inside the menu
+                evt.target !== communityMenuBtn) { // And click is not on the menu button itself
+                communityActionMenu.classList.add('hidden');
+                communityActionMenu.classList.remove('community-action-menu-positioned');
             }
         });
     }
@@ -258,7 +267,10 @@ function setupUIEventListeners() {
                     communityInArray.name = selectedCommunity.name;
                 }
                 renderCommunities(); 
-                if (communityActionMenu) communityActionMenu.style.display = 'none';
+                if (communityActionMenu) { // CSP Refactor
+                    communityActionMenu.classList.add('hidden');
+                    communityActionMenu.classList.remove('community-action-menu-positioned');
+                }
 
                 try {
                     const response = await fetch(`/api/communities/${selectedCommunity.id}/name`, {
@@ -334,7 +346,10 @@ function setupUIEventListeners() {
         communityOpenGateMenuBtnContainer.firstElementChild.addEventListener('click', () => {
             if (selectedCommunity && selectedCommunity.remoteGateControlEnabled) {
                 openCommunityGate(selectedCommunity.name);
-                if (communityActionMenu) communityActionMenu.style.display = 'none';
+                if (communityActionMenu) { // CSP Refactor
+                    communityActionMenu.classList.add('hidden');
+                    communityActionMenu.classList.remove('community-action-menu-positioned');
+                }
             } else if (selectedCommunity) {
                 // This case should ideally not be hit if the button is hidden when not enabled, but as a fallback:
                 alert('Remote gate control is not enabled for this community.');
@@ -417,7 +432,7 @@ function setupUIEventListeners() {
                             address.codes.push(newCode);
                             renderCodes(address); // Re-render codes for that specific address
                         }
-                        addCodeModal.style.display = 'none'; // Hide modal
+                        addCodeModal.classList.remove('popup-visible'); // Hide modal using class
                         delete addCodeModal.dataset.addressId; // Clean up dataset
                     } else {
                         const errorData = await response.json();
@@ -449,7 +464,7 @@ function setupUIEventListeners() {
                 window.codeExpiryFlatpickr.clear();
             }
             
-            addCodeModal.style.display = 'none';
+            addCodeModal.classList.remove('popup-visible'); // Hide modal using class
             // Clean up dataset
             delete addCodeModal.dataset.addressId; 
         });
@@ -644,14 +659,14 @@ async function fetchData() {
         communities = await response.json();
         renderCommunities();
         const addAddressBtn = document.getElementById('addAddressBtn');
-        const addressesHeader = document.querySelector('main h3');
+        const addressesHeader = document.querySelector('main h3'); 
         if (communities.length > 0) {
-            addAddressBtn.style.display = 'block';
-            addressesHeader.style.display = 'block';
+            if (addAddressBtn) addAddressBtn.classList.remove('hidden'); // CSP Refactor
+            if (addressesHeader) addressesHeader.classList.remove('hidden'); // CSP Refactor
             selectCommunity(communities[0].id);
         } else {
-            addAddressBtn.style.display = 'none';
-            addressesHeader.style.display = 'none';
+            if (addAddressBtn) addAddressBtn.classList.add('hidden'); // CSP Refactor
+            if (addressesHeader) addressesHeader.classList.add('hidden'); // CSP Refactor
             document.getElementById('communityName').textContent = 'Please create a Community';
             updateCommunityMenuView(); // Ensure menu is hidden if no communities
         }
@@ -736,13 +751,15 @@ function showLogs(communityName) {
         return;
     }
     if (window.logUpdateInterval) { clearInterval(window.logUpdateInterval); } // Clear existing refresh interval
+    const logPopupEl = document.getElementById('logPopup');
     document.getElementById('logPopupTitle').textContent = `Logs for ${communityName}`;
-    document.getElementById('logPopup').style.display = 'block';
+    if (logPopupEl) logPopupEl.classList.add('popup-visible'); // CSP Refactor
     updateLogs(communityName);
 
     // Set an interval to refresh logs every 10 seconds if the popup is still open
     window.logUpdateInterval = setInterval(() => {
-        if (document.getElementById('logPopup').style.display === 'block') {
+        const currentLogPopupEl = document.getElementById('logPopup'); // Re-fetch in case of DOM changes
+        if (currentLogPopupEl && currentLogPopupEl.classList.contains('popup-visible')) { // CSP Refactor
             updateLogs(communityName);
         } else {
             // If popup was closed by other means, clear this interval
@@ -764,7 +781,8 @@ function showLogs(communityName) {
  * Displays users in the system.
  */
 function showUsersPopup() {
-    document.getElementById('usersPopup').style.display = 'block';
+    const usersPopupEl = document.getElementById('usersPopup');
+    if (usersPopupEl) usersPopupEl.classList.add('popup-visible'); // CSP Refactor
     fetchUsers();
 }
 
@@ -773,7 +791,8 @@ function showUsersPopup() {
  */
 function closeLogPopup() {
     if (window.logPopupTimeout) { clearTimeout(window.logPopupTimeout); } // Clear auto-close timeout
-    document.getElementById('logPopup').style.display = 'none';
+    const logPopupEl = document.getElementById('logPopup');
+    if (logPopupEl) logPopupEl.classList.remove('popup-visible'); // CSP Refactor
     if (window.logUpdateInterval) {
         clearInterval(window.logUpdateInterval); // Clear any potential polling interval
     }
@@ -783,7 +802,8 @@ function closeLogPopup() {
  * Closes the user management popup.
  */
 function closeUsersPopup() {
-    document.getElementById('usersPopup').style.display = 'none';
+    const usersPopupEl = document.getElementById('usersPopup');
+    if (usersPopupEl) usersPopupEl.classList.remove('popup-visible'); // CSP Refactor
 }
 
 /**
@@ -888,14 +908,18 @@ function selectCommunity(communityId) {
     }
 
     const communityMenuBtn = document.getElementById('communityMenuBtn');
-    if (communityMenuBtn) {
-        communityMenuBtn.style.display = 'inline-block'; // Show the button because a community is selected
-    }
+    // Visibility of communityMenuBtn is now handled by updateCommunityMenuView using classes.
     // Ensure the menu itself is hidden by default when a new community is selected
     const communityActionMenu = document.getElementById('communityActionMenu');
-    if (communityActionMenu) {
-        communityActionMenu.style.display = 'none';
+    if (communityActionMenu) { // CSP Refactor
+        communityActionMenu.classList.add('hidden');
+        communityActionMenu.classList.remove('community-action-menu-positioned');
     }
+    // Ensure the menu button is visible if a community is selected (handled by updateCommunityMenuView)
+    // const communityMenuBtn = document.getElementById('communityMenuBtn');
+    // if (communityMenuBtn) {
+    //      communityMenuBtn.classList.remove('hidden'); 
+    // }
 
     updateCommunityMenuView(); // Update menu items based on selected community's state
 
@@ -1517,7 +1541,11 @@ function renderAllowedUsers() {
     }
     const allowedUsersManagement = document.getElementById('allowedUsersManagement');
     if (allowedUsersManagement) {
-        allowedUsersManagement.style.display = selectedCommunity ? 'block' : 'none';
+        if (selectedCommunity && isAdmin) { // CSP Refactor: Only show if a community is selected AND user is admin
+            allowedUsersManagement.classList.remove('hidden');
+        } else {
+            allowedUsersManagement.classList.add('hidden');
+        }
     }
 }
 

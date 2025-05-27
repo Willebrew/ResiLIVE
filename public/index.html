@@ -75,12 +75,12 @@
 
     <!-- Main Content -->
     <main>
-        <div style="display: flex; align-items: center;"> <!-- Added a wrapper for alignment -->
+        <div> <!-- Wrapper div, its flex properties are now handled by #communityName CSS if needed or default block flow -->
             <h2 id="communityName">Please create a Community</h2>
-            <button id="communityMenuBtn" style="margin-left: 10px;">&#8942;</button> <!-- Kebab icon, styled later -->
+            <button id="communityMenuBtn">&#8942;</button> <!-- Kebab icon, styles in CSS -->
         </div>
         <!-- The community action menu -->
-        <div id="communityActionMenu" style="display: none; border: 1px solid #ccc; padding: 10px; position: absolute; background-color: var(--color-card);">
+        <div id="communityActionMenu" class="hidden"> <!-- Initially hidden, styles in CSS -->
             <ul>
                 <li id="renameCommunityOption"><button>Rename Community</button></li>
                 <li>
@@ -90,9 +90,9 @@
                 <li id="communityOpenGateMenuBtnContainer"><button>Open Gate</button></li>
             </ul>
         </div>
-        <h3>Addresses:</h3>
+        <h3 class="hidden">Addresses:</h3>
         <ul id="addressList"></ul>
-        <button id="addAddressBtn" class="add-btn">+</button>
+        <button id="addAddressBtn" class="add-btn hidden">+</button>
 
         <!-- Address details container (shown/hidden in app.js) -->
         <div id="addressDetails"></div>
