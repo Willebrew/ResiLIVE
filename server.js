@@ -11,10 +11,14 @@ const bcrypt = require('bcrypt');
 const path = require('path');
 const RateLimit = require('express-rate-limit');
 const lusca = require('lusca');
+const axios = require('axios'); // Added axios
 const app = express();
 const port = 3000;
 const cors = require('cors');
 const lastAccessTimes = {};
+
+// VERCEL_URL constant
+const VERCEL_URL = process.env.VERCEL_URL || 'http://localhost:3000';
 
 // Initialize Firebase
 admin.initializeApp({
@@ -77,7 +81,7 @@ if (process.env.NODE_ENV === 'production') {
 // API_SECRET_KEY configuration and validation
 // IMPORTANT: For production, API_SECRET_KEY must be a strong, unique, randomly generated string.
 // It should be different from other secrets like SESSION_SECRET.
-const apiSecretKey = process.env.API_SECRET_KEY;
+const apiSecretKey = process.env.API_SECRET_KEY; // This is for general API access, not ResiLive
 const commonApiPlaceholders = ['YOUR_API_SECRET_KEY_HERE', 'changeme', 'secret', 'ENTER_YOUR_API_KEY'];
 
 if (process.env.NODE_ENV === 'production') {
@@ -91,6 +95,20 @@ if (process.env.NODE_ENV === 'production') {
         console.warn('WARNING: API_SECRET_KEY is not set or is using a placeholder. For production, ensure a strong, unique secret is set in your .env file.');
     }
 }
+
+// RESILIVE_API_KEY configuration and validation for Roblox communication
+const RESILIVE_API_KEY = process.env.RESILIVE_API_KEY;
+if (process.env.NODE_ENV === 'production') {
+    if (!RESILIVE_API_KEY || RESILIVE_API_KEY.trim() === '') {
+        console.error('FATAL ERROR: RESILIVE_API_KEY is not defined or is empty in production. This key is required for Roblox gate control functionality.');
+        process.exit(1); // Exit the application if the key is missing in production
+    }
+} else {
+    if (!RESILIVE_API_KEY || RESILIVE_API_KEY.trim() === '') {
+        console.warn('WARNING: RESILIVE_API_KEY is not set or is empty. Roblox gate control functionality will not work without this key.');
+    }
+}
+
 
 app.use(cookieSession({
     name: 'session',
@@ -138,6 +156,53 @@ app.use((req, res, next) => {
         lusca.csrf()(req, res, next);
     } else {
         next();
+    }
+});
+
+// Route to open a gate
+app.post('/api/command/open-gate', requireAuth, async (req, res) => {
+    const { community, address } = req.body; // address is optional
+
+    if (!community) {
+        return res.status(400).json({ error: 'Community is required' });
+    }
+
+    // Validate user's access to the community
+    try {
+        const communitySnapshot = await db.collection('communities')
+            .where('name', '==', community)
+            .get();
+
+        if (communitySnapshot.empty) {
+            return res.status(404).json({ error: 'Community not found' });
+        }
+
+        const communityDoc = communitySnapshot.docs[0];
+        const communityData = communityDoc.data();
+
+        // Check if user is admin/superuser or if user is in allowedUsers for this community
+        const isAdminOrSuperuser = req.session.userRole === 'admin' || req.session.userRole === 'superuser';
+        const isAllowedUser = communityData.allowedUsers && communityData.allowedUsers.includes(req.session.username);
+
+        if (!isAdminOrSuperuser && !isAllowedUser) {
+            return res.status(403).json({ error: 'You do not have permission to send commands to this community.' });
+        }
+
+        // If address is provided, validate it belongs to the community (optional enhancement, depends on Roblox script needs)
+        // For now, we'll pass it directly to sendCommandToRoblox
+
+        const success = await sendCommandToRoblox('open_gate', community, address);
+
+        if (success) {
+            // Log the successful command attempt
+            await logAccess(community, req.session.username, `Sent command: open_gate (Address: ${address || 'N/A'})`);
+            res.json({ message: 'Gate command sent successfully' });
+        } else {
+            res.status(500).json({ error: 'Failed to send gate command to Roblox' });
+        }
+    } catch (error) {
+        console.error('Error processing open-gate command:', error);
+        res.status(500).json({ error: 'Internal server error while sending gate command' });
     }
 });
 
@@ -817,6 +882,7 @@ app.post('/api/communities/:id/addresses', requireAuth, async (req, res) => {
         const newAddress = {
             id: Date.now().toString(),
             street: req.body.street,
+            hasGate: typeof req.body.hasGate === 'boolean' ? req.body.hasGate : false, // Added this line
             people: [],
             codes: [],
             createdAt: new Date().toISOString() // Use ISO string instead of serverTimestamp
@@ -884,6 +950,53 @@ async function logAccess(communityName, playerName, action) {
         });
     } catch (error) {
         console.error('Error logging access:', error);
+    }
+}
+
+/**
+ * Sends a command to the Roblox game server.
+ * @param {string} command - The command to send (e.g., "open_gate").
+ * @param {string} community - The name of the community.
+ * @param {string} [address] - Optional: The specific address within the community.
+ * @returns {Promise<boolean>} True if the command was sent successfully, false otherwise.
+ */
+async function sendCommandToRoblox(command, community, address) {
+    if (!RESILIVE_API_KEY) {
+        console.error('Error: RESILIVE_API_KEY is not set. Cannot send command to Roblox.');
+        return false;
+    }
+
+    const url = `${VERCEL_URL}/api/roblox/command`; // This needs to be the actual Roblox endpoint or a proxy
+    const payload = {
+        command,
+        community,
+        address, // Will be undefined if not provided, which is fine
+    };
+
+    try {
+        console.log(`Sending command to Roblox: ${JSON.stringify(payload)} at ${url}`);
+        const response = await axios.post(url, payload, {
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Api-Key': RESILIVE_API_KEY, // Use the ResiLive specific API key
+            },
+            timeout: 10000, // 10 seconds timeout
+        });
+
+        if (response.status === 200 && response.data && response.data.success) {
+            console.log('Command sent to Roblox successfully:', response.data);
+            return true;
+        } else {
+            console.error('Failed to send command to Roblox. Status:', response.status, 'Data:', response.data);
+            return false;
+        }
+    } catch (error) {
+        console.error('Error sending command to Roblox:', error.message);
+        if (error.response) {
+            console.error('Error response data:', error.response.data);
+            console.error('Error response status:', error.response.status);
+        }
+        return false;
     }
 }
 
