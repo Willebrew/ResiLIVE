@@ -75,7 +75,21 @@
 
     <!-- Main Content -->
     <main>
-        <h2 id="communityName">Please create a Community</h2>
+        <div style="display: flex; align-items: center;"> <!-- Added a wrapper for alignment -->
+            <h2 id="communityName">Please create a Community</h2>
+            <button id="communityMenuBtn" style="margin-left: 10px;">&#8942;</button> <!-- Kebab icon, styled later -->
+        </div>
+        <!-- The community action menu -->
+        <div id="communityActionMenu" style="display: none; border: 1px solid #ccc; padding: 10px; position: absolute; background-color: var(--color-card);">
+            <ul>
+                <li id="renameCommunityOption"><button>Rename Community</button></li>
+                <li>
+                    <label for="remoteGateControlToggle">Remote Gate Control:</label>
+                    <input type="checkbox" id="remoteGateControlToggle" />
+                </li>
+                <li id="communityOpenGateMenuBtnContainer"><button>Open Gate</button></li>
+            </ul>
+        </div>
         <h3>Addresses:</h3>
         <ul id="addressList"></ul>
         <button id="addAddressBtn" class="add-btn">+</button>
