@@ -78,6 +78,35 @@ async function fetchCsrfToken() {
 }
 
 /**
+ * Updates the view of the community action menu (checkbox and Open Gate button visibility).
+ */
+function updateCommunityMenuView() {
+    const communityMenuBtn = document.getElementById('communityMenuBtn');
+    const communityActionMenu = document.getElementById('communityActionMenu');
+
+    if (!selectedCommunity) {
+        if (communityMenuBtn) communityMenuBtn.style.display = 'none';
+        if (communityActionMenu) communityActionMenu.style.display = 'none'; // Also hide the menu itself
+        return;
+    }
+
+    // Ensure button is visible if a community is selected, menu itself might be hidden or visible
+    if (communityMenuBtn) communityMenuBtn.style.display = 'inline-block';
+
+    const remoteGateControlToggle = document.getElementById('remoteGateControlToggle');
+    const communityOpenGateMenuBtnContainer = document.getElementById('communityOpenGateMenuBtnContainer');
+
+    if (remoteGateControlToggle) {
+        // Ensure selectedCommunity.remoteGateControlEnabled is treated as a boolean
+        remoteGateControlToggle.checked = !!selectedCommunity.remoteGateControlEnabled;
+    }
+
+    if (communityOpenGateMenuBtnContainer) {
+        communityOpenGateMenuBtnContainer.style.display = selectedCommunity.remoteGateControlEnabled ? 'list-item' : 'none';
+    }
+}
+
+/**
  * Updates the username displayed in the UI (for the user menu).
  * Also sets the user circle initial and full name.
  * @param {string} username - The username to display.
@@ -183,6 +212,134 @@ function setupUIEventListeners() {
     const addAddressBtn = document.getElementById('addAddressBtn');
     if (addAddressBtn) {
         addAddressBtn.addEventListener('click', addAddress);
+    }
+
+    // Community Action Menu Logic
+    const communityMenuBtn = document.getElementById('communityMenuBtn');
+    const communityActionMenu = document.getElementById('communityActionMenu');
+
+    if (communityMenuBtn && communityActionMenu) {
+        communityMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent click from closing menu immediately
+            const isVisible = communityActionMenu.style.display === 'block';
+            communityActionMenu.style.display = isVisible ? 'none' : 'block';
+            if (!isVisible) {
+                // Position menu next to the button
+                const btnRect = communityMenuBtn.getBoundingClientRect();
+                // Position below the button, aligning left edges
+                communityActionMenu.style.left = btnRect.left + 'px';
+                communityActionMenu.style.top = btnRect.bottom + 'px'; 
+            }
+        });
+
+        // Hide menu when clicking outside
+        document.addEventListener('click', (evt) => {
+            if (communityActionMenu.style.display === 'block' &&
+                !communityActionMenu.contains(evt.target) &&
+                evt.target !== communityMenuBtn) {
+                communityActionMenu.style.display = 'none';
+            }
+        });
+    }
+
+    // "Rename Community" option
+    const renameCommunityOption = document.getElementById('renameCommunityOption');
+    if (renameCommunityOption && renameCommunityOption.firstElementChild) {
+        renameCommunityOption.firstElementChild.addEventListener('click', async () => {
+            if (!selectedCommunity) return;
+            const newName = prompt('Enter new community name (no spaces allowed):', selectedCommunity.name);
+            if (newName && newName.trim() !== '' && !newName.includes(' ')) {
+                const oldName = selectedCommunity.name;
+                // Optimistically update UI
+                selectedCommunity.name = newName.trim();
+                document.getElementById('communityName').textContent = selectedCommunity.name;
+                const communityInArray = communities.find(c => c.id === selectedCommunity.id);
+                if (communityInArray) {
+                    communityInArray.name = selectedCommunity.name;
+                }
+                renderCommunities(); 
+                if (communityActionMenu) communityActionMenu.style.display = 'none';
+
+                try {
+                    const response = await fetch(`/api/communities/${selectedCommunity.id}/name`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken,
+                        },
+                        body: JSON.stringify({ name: selectedCommunity.name }),
+                    });
+                    if (!response.ok) {
+                        // Revert on error
+                        selectedCommunity.name = oldName;
+                        document.getElementById('communityName').textContent = oldName;
+                        if (communityInArray) communityInArray.name = oldName;
+                        renderCommunities();
+                        const errorData = await response.json();
+                        alert(`Error renaming community: ${errorData.error || 'Unknown error'}`);
+                    }
+                } catch (error) {
+                    // Revert on error
+                    selectedCommunity.name = oldName;
+                    document.getElementById('communityName').textContent = oldName;
+                    if (communityInArray) communityInArray.name = oldName;
+                    renderCommunities();
+                    alert(`Error renaming community: ${error.message}`);
+                }
+            } else if (newName) { // newName is not null, so it means it was invalid
+                alert('Invalid community name. Ensure it is not empty and does not contain spaces.');
+            }
+        });
+    }
+
+    // "Remote Gate Control" toggle
+    const remoteGateControlToggle = document.getElementById('remoteGateControlToggle');
+    if (remoteGateControlToggle) {
+        remoteGateControlToggle.addEventListener('change', async () => {
+            if (!selectedCommunity) return;
+            const isEnabled = remoteGateControlToggle.checked;
+            selectedCommunity.remoteGateControlEnabled = isEnabled;
+            updateCommunityMenuView(); // Update UI (shows/hides open gate button in menu)
+
+            try {
+                const response = await fetch(`/api/communities/${selectedCommunity.id}/remote-gate-control`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken,
+                    },
+                    body: JSON.stringify({ enabled: isEnabled }),
+                });
+                if (!response.ok) {
+                    // Revert on error
+                    selectedCommunity.remoteGateControlEnabled = !isEnabled;
+                    remoteGateControlToggle.checked = !isEnabled;
+                    updateCommunityMenuView();
+                    const errorData = await response.json();
+                    alert(`Error updating remote gate control: ${errorData.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                // Revert on error
+                selectedCommunity.remoteGateControlEnabled = !isEnabled;
+                remoteGateControlToggle.checked = !isEnabled;
+                updateCommunityMenuView();
+                alert(`Error updating remote gate control: ${error.message}`);
+            }
+        });
+    }
+
+    // "Open Gate" button in menu
+    const communityOpenGateMenuBtnContainer = document.getElementById('communityOpenGateMenuBtnContainer');
+    if (communityOpenGateMenuBtnContainer && communityOpenGateMenuBtnContainer.firstElementChild) {
+        communityOpenGateMenuBtnContainer.firstElementChild.addEventListener('click', () => {
+            if (selectedCommunity && selectedCommunity.remoteGateControlEnabled) {
+                openCommunityGate(selectedCommunity.name);
+                if (communityActionMenu) communityActionMenu.style.display = 'none';
+            } else if (selectedCommunity) {
+                // This case should ideally not be hit if the button is hidden when not enabled, but as a fallback:
+                alert('Remote gate control is not enabled for this community.');
+            }
+        });
     }
 
     // Refactored popup button event listeners
@@ -496,6 +653,7 @@ async function fetchData() {
             addAddressBtn.style.display = 'none';
             addressesHeader.style.display = 'none';
             document.getElementById('communityName').textContent = 'Please create a Community';
+            updateCommunityMenuView(); // Ensure menu is hidden if no communities
         }
         if (communities.length >= 8) {
             const addButton = document.getElementById('12');
@@ -724,23 +882,22 @@ function selectCommunity(communityId) {
     const communityNameElement = document.getElementById('communityName');
     communityNameElement.textContent = selectedCommunity.name;
 
-    // Remove existing open gate button if any
-    const existingOpenGateBtn = document.getElementById('communityOpenGateBtn');
-    if (existingOpenGateBtn) {
-        existingOpenGateBtn.remove();
+    // Initialize remoteGateControlEnabled if it's not defined
+    if (typeof selectedCommunity.remoteGateControlEnabled === 'undefined') {
+        selectedCommunity.remoteGateControlEnabled = false; // Default to false
     }
 
-    // Create and add the "Open Gate" button
-    if (selectedCommunity) { // Only add if a community is truly selected
-        const openGateBtn = document.createElement('button');
-        openGateBtn.textContent = 'Open Gate';
-        openGateBtn.className = 'community-open-gate-btn'; // For styling
-        openGateBtn.id = 'communityOpenGateBtn'; // For removal
-        openGateBtn.addEventListener('click', () => openCommunityGate(selectedCommunity.name));
-        
-        // Insert the button after the H2 element for community name
-        communityNameElement.parentNode.insertBefore(openGateBtn, communityNameElement.nextSibling);
+    const communityMenuBtn = document.getElementById('communityMenuBtn');
+    if (communityMenuBtn) {
+        communityMenuBtn.style.display = 'inline-block'; // Show the button because a community is selected
     }
+    // Ensure the menu itself is hidden by default when a new community is selected
+    const communityActionMenu = document.getElementById('communityActionMenu');
+    if (communityActionMenu) {
+        communityActionMenu.style.display = 'none';
+    }
+
+    updateCommunityMenuView(); // Update menu items based on selected community's state
 
     renderCommunities();
     renderAllowedUsers();
@@ -1069,6 +1226,7 @@ async function removeCommunity(communityId) {
                     addAddressBtn.style.display = 'none';
                     addressesHeader.style.display = 'none';
                     document.getElementById('communityName').textContent = 'Please create a Community';
+                    updateCommunityMenuView(); // Ensure menu is hidden if last community is removed
                 }
                 updateAddCommunityButtonVisibility();
             } else {
