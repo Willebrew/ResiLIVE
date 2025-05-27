@@ -871,10 +871,13 @@ function renderAddresses() {
             // Add "Open Gate" button if address.hasGate is true
             if (address.hasGate === true) {
                 const openGateAddressBtn = document.createElement('button');
-                openGateAddressBtn.textContent = 'Open Gate for Address';
+                openGateAddressBtn.textContent = 'Open Gate'; // Changed text content
                 openGateAddressBtn.className = 'add-btn address-open-gate-btn'; // Using 'add-btn' for existing styling, plus a specific class
                 openGateAddressBtn.addEventListener('click', () => openAddressGate(selectedCommunity.name, address.street));
-                addressDetailsDiv.appendChild(openGateAddressBtn); // Append to the details section
+                // Ensure codesDiv is appended before this button for correct order
+                // The current structure already appends codesDiv to addressDetailsDiv before this block,
+                // and this button is also appended to addressDetailsDiv.
+                addressDetailsDiv.appendChild(openGateAddressBtn); 
             }
         });
     }
@@ -1112,7 +1115,10 @@ async function addAddress() {
     if (!selectedCommunity) return;
     const street = prompt('Enter address:');
     if (street) {
-        const hasGate = confirm('Does this address have a gate?'); // Added this line
+        const hasGate = await promptForGateConfirmation(); // Modified this line
+        // If promptForGateConfirmation resolved to undefined (e.g. modal closed via ESC or other means not handled)
+        // default to false or handle as an abort. For now, let it proceed, which might result in 'undefined'.
+        // A more robust solution might involve the promise rejecting or resolving with a specific "abort" symbol.
         try {
             const response = await fetch(`/api/communities/${selectedCommunity.id}/addresses`, {
                 method: 'POST',
@@ -1367,6 +1373,42 @@ function removeSelectedUsers() {
         selectedCommunity.allowedUsers = selectedCommunity.allowedUsers.filter(u => u !== option.value);
     });
     updateAllowedUsers();
+}
+
+function promptForGateConfirmation() {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirmHasGateModal');
+        const yesBtn = document.getElementById('confirmHasGateYesBtn');
+        const noBtn = document.getElementById('confirmHasGateNoBtn');
+
+        // Function to handle cleanup
+        function cleanupAndResolve(value) {
+            modal.style.display = 'none';
+            // Clone and replace buttons to remove event listeners
+            // This is crucial to prevent multiple listeners from accumulating
+            // if the modal is shown multiple times.
+            const newYesBtn = yesBtn.cloneNode(true);
+            yesBtn.parentNode.replaceChild(newYesBtn, yesBtn);
+
+            const newNoBtn = noBtn.cloneNode(true);
+            noBtn.parentNode.replaceChild(newNoBtn, noBtn);
+            
+            resolve(value);
+        }
+
+        // Get the fresh button references for attaching events this time
+        const currentYesBtn = document.getElementById('confirmHasGateYesBtn');
+        const currentNoBtn = document.getElementById('confirmHasGateNoBtn');
+
+        currentYesBtn.onclick = () => cleanupAndResolve(true);
+        currentNoBtn.onclick = () => cleanupAndResolve(false);
+
+        // Optional: handle closing modal via ESC key or clicking outside
+        // For simplicity, this is omitted but could be added for better UX.
+
+        // Show the modal
+        modal.style.display = 'block';
+    });
 }
 
 // Fetch initial CSRF token and data (already set up in DOMContentLoaded above)
