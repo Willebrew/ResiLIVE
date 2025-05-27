@@ -12,6 +12,7 @@ const path = require('path');
 const RateLimit = require('express-rate-limit');
 const lusca = require('lusca');
 const axios = require('axios'); // Added axios
+const https = require('https'); // Added https module
 const app = express();
 const port = 3000;
 const cors = require('cors');
@@ -96,19 +97,8 @@ if (process.env.NODE_ENV === 'production') {
     }
 }
 
-// RESILIVE_API_KEY configuration and validation for Roblox communication
-const RESILIVE_API_KEY = process.env.RESILIVE_API_KEY;
-if (process.env.NODE_ENV === 'production') {
-    if (!RESILIVE_API_KEY || RESILIVE_API_KEY.trim() === '') {
-        console.error('FATAL ERROR: RESILIVE_API_KEY is not defined or is empty in production. This key is required for Roblox gate control functionality.');
-        process.exit(1); // Exit the application if the key is missing in production
-    }
-} else {
-    if (!RESILIVE_API_KEY || RESILIVE_API_KEY.trim() === '') {
-        console.warn('WARNING: RESILIVE_API_KEY is not set or is empty. Roblox gate control functionality will not work without this key.');
-    }
-}
-
+// The RESILIVE_API_KEY block has been removed as per instructions.
+// The existing apiSecretKey (process.env.API_SECRET_KEY) will be used.
 
 app.use(cookieSession({
     name: 'session',
@@ -961,8 +951,8 @@ async function logAccess(communityName, playerName, action) {
  * @returns {Promise<boolean>} True if the command was sent successfully, false otherwise.
  */
 async function sendCommandToRoblox(command, community, address) {
-    if (!RESILIVE_API_KEY) {
-        console.error('Error: RESILIVE_API_KEY is not set. Cannot send command to Roblox.');
+    if (!apiSecretKey) { // Changed from RESILIVE_API_KEY to apiSecretKey
+        console.error('Error: API_SECRET_KEY is not set. Cannot send command to Roblox.');
         return false;
     }
 
@@ -975,12 +965,14 @@ async function sendCommandToRoblox(command, community, address) {
 
     try {
         console.log(`Sending command to Roblox: ${JSON.stringify(payload)} at ${url}`);
+        const httpsAgent = new https.Agent({ minVersion: 'TLSv1.2' }); // Added httpsAgent
         const response = await axios.post(url, payload, {
             headers: {
                 'Content-Type': 'application/json',
-                'X-Api-Key': RESILIVE_API_KEY, // Use the ResiLive specific API key
+                'X-Api-Key': apiSecretKey, // Changed from RESILIVE_API_KEY to apiSecretKey
             },
             timeout: 10000, // 10 seconds timeout
+            httpsAgent: httpsAgent // Added httpsAgent to axios config
         });
 
         if (response.status === 200 && response.data && response.data.success) {
