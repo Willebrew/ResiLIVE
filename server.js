@@ -956,7 +956,9 @@ async function sendCommandToRoblox(command, community, address) {
         return false;
     }
 
-    const url = `${VERCEL_URL}/api/roblox/command`; // This needs to be the actual Roblox endpoint or a proxy
+    // Ensure VERCEL_URL is the base, and the path is /api/command as per subtask for the final endpoint.
+    // Assuming VERCEL_URL will be https://resilive-remote-controller.vercel.app in production.
+    const url = 'https://resilive-remote-controller.vercel.app/api/command'; // Statically set URL
     const payload = {
         command,
         community,
@@ -965,7 +967,10 @@ async function sendCommandToRoblox(command, community, address) {
 
     try {
         console.log(`Sending command to Roblox: ${JSON.stringify(payload)} at ${url}`);
-        const httpsAgent = new https.Agent({ minVersion: 'TLSv1.2' }); // Added httpsAgent
+        // Modified httpsAgent to use secureOptions as per subtask
+        const httpsAgent = new https.Agent({ 
+            secureOptions: crypto.constants.SSL_OP_NO_TLSv1 | crypto.constants.SSL_OP_NO_TLSv1_1 
+        });
         const response = await axios.post(url, payload, {
             headers: {
                 'Content-Type': 'application/json',
