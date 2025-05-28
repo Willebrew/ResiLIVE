@@ -419,7 +419,89 @@ main {
     font-size: 1.2em;
     margin-bottom: 10px;
     color: var(--color-text);
+    /* Ensure h2 and button are on the same line and vertically centered */
+    display: flex; 
+    align-items: center; 
 }
+
+/* Style for the new community menu button */
+#communityMenuBtn {
+    background: none;
+    border: none;
+    color: var(--color-text);
+    font-size: 1.5em; /* Larger for a more clickable icon appearance */
+    cursor: pointer;
+    padding: 0 5px; /* Minimal padding */
+    margin-left: 10px; /* Space between name and button */
+    line-height: 1; /* Ensure an icon font or text aligns well */
+    vertical-align: middle; /* Helps align with the H2 text if flex isn't perfectly centering */
+}
+
+#communityMenuBtn:hover {
+    opacity: 0.7;
+}
+
+/* Styles for the community action menu dropdown */
+#communityActionMenu {
+    position: absolute; /* Initial position, might be refined by JS if .community-action-menu-positioned is used */
+    /* z-index: 100; Will be handled by .community-action-menu-positioned */
+    background-color: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 10px;
+    min-width: 200px; /* Ensure enough width for options */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5); /* More pronounced shadow */
+    /* display: none; /* This line is removed, .hidden class in HTML will hide it */
+}
+
+#communityActionMenu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#communityActionMenu li {
+    margin-bottom: 8px; /* Space between menu items */
+}
+
+#communityActionMenu li:last-child {
+    margin-bottom: 0;
+}
+
+#communityActionMenu button {
+    background-color: var(--color-card); /* Match dropdown background */
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--btn-radius);
+    padding: 8px 12px;
+    width: 100%; /* Make buttons full width of menu */
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+#communityActionMenu button:hover {
+    background-color: #1c1c1c; /* Slightly lighter than card for hover */
+    border-color: #444; /* Lighter border on hover */
+}
+
+/* Specific styling for the remote gate control toggle and label */
+#communityActionMenu li label[for="remoteGateControlToggle"] {
+    display: flex; /* Use flex to align checkbox and text */
+    align-items: center;
+    font-size: 0.9em;
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+#remoteGateControlToggle {
+    margin-right: 8px; /* Space between checkbox and label text */
+    cursor: pointer;
+    /* Custom styling for checkbox can be added here if desired,
+       but default rendering is often fine and theme-consistent. */
+}
+
 
 h3 {
     margin: 10px 0;
@@ -505,7 +587,7 @@ h3 {
   POPUPS / MODALS
 *********************************************************/
 .popup {
-    display: none;
+    display: none; /* Default state for popups */
     position: fixed;
     z-index: 1000;
     left: 0;
@@ -779,12 +861,11 @@ button.address-open-gate-btn {
     padding: 6px 12px;                          /* Matches .add-btn size */
     font-size: 0.85em;                          /* Matches .add-btn size */
     transition: background-color 0.3s, opacity 0.2s; /* Standard transitions */
-    display: block;                             /* Block display for vertical stacking */
+    display: inline-block;                      /* Changed from block */
     margin-top: 10px;                           /* Space above this button */
-    margin-left: 0;                             /* Ensure no unintended left margin */
-    margin-right: 0;                            /* Ensure no unintended right margin */
-    text-align: center;                         /* Center text if button takes full width of its parent in some cases */
-    width: auto; /* Allow button to size to content + padding, or set a specific width if needed */
+    margin-left: 20px;                          /* Added for left alignment */
+    /* text-align: center; removed, not applicable for inline-block as such */
+    /* width: auto; good for inline-block */
 }
 
 button.address-open-gate-btn:hover {
@@ -806,4 +887,28 @@ button.address-open-gate-btn:hover {
 
 #confirmHasGateYesBtn:hover {
     opacity: 0.8;
+}
+
+/********************************************************
+  CSP UTILITY CLASSES
+*********************************************************/
+.hidden {
+    display: none !important;
+}
+
+/* .visible class might be used for elements that need a specific display type 
+   other than their default when un-hidden, e.g. display: flex.
+   For simple block, removing .hidden might be enough. */
+.visible {
+    display: block !important; 
+}
+
+.popup-visible {
+    display: block !important; /* For popups that are display:none by default via .popup */
+}
+
+.community-action-menu-positioned {
+    position: absolute;
+    z-index: 100; 
+    /* top, left will be set by JS if still needed, or handled by more specific positioning logic if possible */
 }
