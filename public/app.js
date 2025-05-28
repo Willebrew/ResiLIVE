@@ -257,7 +257,7 @@ function setupUIEventListeners() {
                 // Dynamic positioning (Keep as per instructions)
                 const btnRect = communityMenuBtn.getBoundingClientRect();
                 communityActionMenu.style.left = btnRect.left + 'px'; 
-                communityActionMenu.style.top = (btnRect.bottom + 5) + 'px'; // Added +5 for offset
+                communityActionMenu.style.top = (btnRect.bottom + 2) + 'px'; // Changed +5 to +2 for offset
                 communityActionMenu.classList.add('show'); // Add show class to trigger animation
             } else {
                 communityActionMenu.classList.remove('show');
