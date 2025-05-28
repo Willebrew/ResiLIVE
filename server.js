@@ -120,6 +120,7 @@ app.use((req, res, next) => {
     const cspDirectives = [
         "default-src 'self'",
         `script-src-elem 'self' https://cdn.jsdelivr.net 'nonce-${nonce}'`, // Allow self and scripts with the correct nonce
+        "style-src 'self' https://cdn.jsdelivr.net 'sha256-lOLzuHiC/tzyOWpOjSY2MqilBHMQkoUoON+GTXvMbi0='",
         `style-src-elem 'self' https://cdn.jsdelivr.net 'nonce-${nonce}'`,  // Allow self and styles with the correct nonce
         "img-src 'self' data:",              // Allow images from self and data URIs
         "font-src 'self' https://www.perplexity.ai data:", // Allow fonts from self, perplexity.ai, and data URIs
