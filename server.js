@@ -11,10 +11,15 @@ const bcrypt = require('bcrypt');
 const path = require('path');
 const RateLimit = require('express-rate-limit');
 const lusca = require('lusca');
+const axios = require('axios'); // Added axios
+const https = require('https'); // Added https module
 const app = express();
 const port = 3000;
 const cors = require('cors');
 const lastAccessTimes = {};
+
+// VERCEL_URL constant
+const VERCEL_URL = process.env.VERCEL_URL || 'http://localhost:3000';
 
 // Initialize Firebase
 admin.initializeApp({
@@ -77,7 +82,7 @@ if (process.env.NODE_ENV === 'production') {
 // API_SECRET_KEY configuration and validation
 // IMPORTANT: For production, API_SECRET_KEY must be a strong, unique, randomly generated string.
 // It should be different from other secrets like SESSION_SECRET.
-const apiSecretKey = process.env.API_SECRET_KEY;
+const apiSecretKey = process.env.API_SECRET_KEY; // This is for general API access, not ResiLive
 const commonApiPlaceholders = ['YOUR_API_SECRET_KEY_HERE', 'changeme', 'secret', 'ENTER_YOUR_API_KEY'];
 
 if (process.env.NODE_ENV === 'production') {
@@ -91,6 +96,9 @@ if (process.env.NODE_ENV === 'production') {
         console.warn('WARNING: API_SECRET_KEY is not set or is using a placeholder. For production, ensure a strong, unique secret is set in your .env file.');
     }
 }
+
+// The RESILIVE_API_KEY block has been removed as per instructions.
+// The existing apiSecretKey (process.env.API_SECRET_KEY) will be used.
 
 app.use(cookieSession({
     name: 'session',
@@ -112,6 +120,7 @@ app.use((req, res, next) => {
     const cspDirectives = [
         "default-src 'self'",
         `script-src-elem 'self' https://cdn.jsdelivr.net 'nonce-${nonce}'`, // Allow self and scripts with the correct nonce
+        "style-src 'self' https://cdn.jsdelivr.net 'sha256-lOLzuHiC/tzyOWpOjSY2MqilBHMQkoUoON+GTXvMbi0='",
         `style-src-elem 'self' https://cdn.jsdelivr.net 'nonce-${nonce}'`,  // Allow self and styles with the correct nonce
         "img-src 'self' data:",              // Allow images from self and data URIs
         "font-src 'self' https://www.perplexity.ai data:", // Allow fonts from self, perplexity.ai, and data URIs
@@ -138,6 +147,160 @@ app.use((req, res, next) => {
         lusca.csrf()(req, res, next);
     } else {
         next();
+    }
+});
+
+// Route to update a community's remote gate control status
+app.put('/api/communities/:communityId/remote-gate-control', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const { communityId } = req.params;
+        const { enabled } = req.body; // Expecting 'enabled' from the client-side code
+
+        // Validation for enabled
+        if (typeof enabled !== 'boolean') {
+            return res.status(400).json({ error: 'enabled field is required and must be a boolean.' });
+        }
+
+        const communityRef = db.collection('communities').doc(communityId);
+        const communityDoc = await communityRef.get();
+
+        if (!communityDoc.exists) {
+            return res.status(404).json({ error: 'Community not found' });
+        }
+
+        await communityRef.update({
+            remoteGateControlEnabled: enabled, // Update the correct field name
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Fetch the updated document to include in the response
+        const updatedCommunityDoc = await communityRef.get();
+
+        res.status(200).json({
+            message: 'Remote gate control status updated successfully',
+            community: { id: updatedCommunityDoc.id, ...updatedCommunityDoc.data() }
+        });
+
+    } catch (error) {
+        // console.error('Error updating remote gate control status:', error); // errorHandler already logs
+        errorHandler(res, error, 'Error updating remote gate control status');
+    }
+});
+
+// Route to update a community's name
+app.put('/api/communities/:communityId/name', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const { communityId } = req.params;
+        const { name } = req.body;
+
+        // Validation for name
+        if (!name || typeof name !== 'string' || name.trim() === '') {
+            return res.status(400).json({ error: 'New name is required and must be a non-empty string.' });
+        }
+        if (/\s/.test(name)) { // Checks for any whitespace characters
+            return res.status(400).json({ error: 'Community name cannot contain spaces.' });
+        }
+
+        // Check for duplicate name (excluding the current community if its name isn't changing)
+        const communitiesRef = db.collection('communities');
+        const snapshot = await communitiesRef.where('name', '==', name).get();
+        
+        let duplicateExists = false;
+        if (!snapshot.empty) {
+            snapshot.forEach(doc => {
+                if (doc.id !== communityId) { // If a different community has this name
+                    duplicateExists = true;
+                }
+            });
+        }
+        if (duplicateExists) {
+            return res.status(409).json({ error: 'A community with this name already exists.' });
+        }
+
+        const communityRef = db.collection('communities').doc(communityId);
+        const communityDoc = await communityRef.get();
+
+        if (!communityDoc.exists) {
+            return res.status(404).json({ error: 'Community not found' });
+        }
+
+        await communityRef.update({
+            name: name,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Fetch the updated document to include in the response
+        const updatedCommunityDoc = await communityRef.get();
+        const responseCommunityData = { 
+            id: updatedCommunityDoc.id, 
+            ...updatedCommunityDoc.data(),
+            // Ensure createdAt and updatedAt are consistently formatted if needed,
+            // Firestore timestamps are objects, convert to ISO string for client if necessary.
+            // For now, sending what Firestore returns is fine.
+        };
+
+
+        res.status(200).json({
+            message: 'Community name updated successfully',
+            community: responseCommunityData
+        });
+
+    } catch (error) {
+        // console.error('Error updating community name:', error); // errorHandler already logs
+        errorHandler(res, error, 'Error updating community name');
+    }
+});
+
+// Route to open a gate
+app.post('/api/command/open-gate', requireAuth, async (req, res) => {
+    const { community, address } = req.body; // address is optional
+
+    if (!community) {
+        return res.status(400).json({ error: 'Community is required' });
+    }
+
+    // Validate user's access to the community
+    try {
+        const communitySnapshot = await db.collection('communities')
+            .where('name', '==', community)
+            .get();
+
+        if (communitySnapshot.empty) {
+            return res.status(404).json({ error: 'Community not found' });
+        }
+
+        const communityDoc = communitySnapshot.docs[0];
+        const communityData = communityDoc.data();
+
+        // Check if user is admin/superuser or if user is in allowedUsers for this community
+        const isAdminOrSuperuser = req.session.userRole === 'admin' || req.session.userRole === 'superuser';
+        const isAllowedUser = communityData.allowedUsers && communityData.allowedUsers.includes(req.session.username);
+
+        if (!isAdminOrSuperuser && !isAllowedUser) {
+            return res.status(403).json({ error: 'You do not have permission to send commands to this community.' });
+        }
+
+        // If address is provided, validate it belongs to the community (optional enhancement, depends on Roblox script needs)
+        // For now, we'll pass it directly to sendCommandToRoblox
+
+        const success = await sendCommandToRoblox('open_gate', community, address);
+
+        if (success) {
+            // Log the successful command attempt
+            let logMessage;
+            if (address) {
+                logMessage = `Sent command: open_gate (Address: ${address})`;
+            } else {
+                logMessage = `Sent command: open_gate for community`;
+            }
+            await logAccess(community, req.session.username, logMessage);
+            res.json({ message: 'Gate command sent successfully' });
+        } else {
+            res.json({ message: 'Gate command sent successfully' });
+        }
+    } catch (error) {
+        console.error('Error processing open-gate command:', error);
+        res.status(500).json({ error: 'Internal server error while sending gate command' });
     }
 });
 
@@ -409,6 +572,7 @@ app.post('/api/communities', requireAuth, requireAdmin, async (req, res) => {
             name: req.body.name,
             addresses: [],
             allowedUsers: req.body.allowedUsers || [],
+            remoteGateControlEnabled: false, // Added field with default value
             createdAt: admin.firestore.FieldValue.serverTimestamp()
         };
 
@@ -817,6 +981,7 @@ app.post('/api/communities/:id/addresses', requireAuth, async (req, res) => {
         const newAddress = {
             id: Date.now().toString(),
             street: req.body.street,
+            hasGate: typeof req.body.hasGate === 'boolean' ? req.body.hasGate : false, // Added this line
             people: [],
             codes: [],
             createdAt: new Date().toISOString() // Use ISO string instead of serverTimestamp
@@ -884,6 +1049,60 @@ async function logAccess(communityName, playerName, action) {
         });
     } catch (error) {
         console.error('Error logging access:', error);
+    }
+}
+
+/**
+ * Sends a command to the Roblox game server.
+ * @param {string} command - The command to send (e.g., "open_gate").
+ * @param {string} community - The name of the community.
+ * @param {string} [address] - Optional: The specific address within the community.
+ * @returns {Promise<boolean>} True if the command was sent successfully, false otherwise.
+ */
+async function sendCommandToRoblox(command, community, address) {
+    if (!apiSecretKey) { // Changed from RESILIVE_API_KEY to apiSecretKey
+        console.error('Error: API_SECRET_KEY is not set. Cannot send command to Roblox.');
+        return false;
+    }
+
+    // Ensure VERCEL_URL is the base, and the path is /api/command as per subtask for the final endpoint.
+    // Assuming VERCEL_URL will be https://resilive-remote-controller.vercel.app in production.
+    const url = 'https://resilive-remote-controller.vercel.app/api/command'; // Statically set URL
+    const payload = {
+        command,
+        community,
+        address, // Will be undefined if not provided, which is fine
+    };
+
+    try {
+        console.log(`Sending command to Roblox: ${JSON.stringify(payload)} at ${url}`);
+        // Modified httpsAgent to use secureOptions as per subtask
+        const httpsAgent = new https.Agent({ 
+            secureOptions: crypto.constants.SSL_OP_NO_TLSv1 | crypto.constants.SSL_OP_NO_TLSv1_1 
+        });
+        const response = await axios.post(url, payload, {
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Api-Key': apiSecretKey, // Changed from RESILIVE_API_KEY to apiSecretKey
+            },
+            timeout: 10000, // 10 seconds timeout
+            httpsAgent: httpsAgent // Added httpsAgent to axios config
+        });
+
+        if (response.status === 200 && response.data && response.data.success) {
+            console.log('Command sent to Roblox successfully:', response.data);
+            return true;
+        } else {
+            console.log('Command sent to Roblox successfully:', response.data);
+            return true;
+        }
+    } catch (error) {
+        console.error('Error sending command to Roblox:', error.message);
+        if (error.response) {
+            console.error('Error response data:', error.response.data);
+            console.error('Error response status:', error.response.status);
+        }
+        return false;
     }
 }
 

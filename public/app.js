@@ -78,6 +78,64 @@ async function fetchCsrfToken() {
 }
 
 /**
+ * Updates the view of the community action menu (checkbox and Open Gate button visibility).
+ */
+function updateCommunityMenuView() {
+    const communityMenuBtn = document.getElementById('communityMenuBtn');
+    const communityActionMenu = document.getElementById('communityActionMenu'); 
+    const communityOpenGateMenuBtnContainer = document.getElementById('communityOpenGateMenuBtnContainer'); 
+
+    // Ensure the old menu item for "Open Gate" is definitely hidden
+    if (communityOpenGateMenuBtnContainer) {
+        communityOpenGateMenuBtnContainer.classList.add('hidden');
+    }
+
+    if (!selectedCommunity) {
+        if (communityMenuBtn) communityMenuBtn.classList.add('hidden');
+        if (communityActionMenu) {
+            communityActionMenu.classList.add('hidden');
+            communityActionMenu.classList.remove('community-action-menu-positioned');
+        }
+        // Ensure the gate button container is also hidden if no community
+        if (communityOpenGateMenuBtnContainer) communityOpenGateMenuBtnContainer.classList.add('hidden'); 
+        return;
+    }
+
+    // If a community is selected, the menu button should be visible
+    if (communityMenuBtn) communityMenuBtn.classList.remove('hidden');
+
+    const remoteGateControlToggle = document.getElementById('remoteGateControlToggle');
+    if (remoteGateControlToggle) {
+        remoteGateControlToggle.checked = !!selectedCommunity.remoteGateControlEnabled;
+    }
+
+    // if (communityOpenGateMenuBtnContainer) {
+    //     // Use toggle for cleaner add/remove based on condition
+    //     communityOpenGateMenuBtnContainer.classList.toggle('hidden', !selectedCommunity.remoteGateControlEnabled);
+    // }
+
+    const externalOpenGateBtnContainer = document.getElementById('externalOpenGateBtnContainer');
+    if (externalOpenGateBtnContainer) {
+        externalOpenGateBtnContainer.innerHTML = ''; // Clear any previous button
+        if (selectedCommunity && selectedCommunity.remoteGateControlEnabled) {
+            const openGateBtn = document.createElement('button');
+            openGateBtn.textContent = 'Open Gate';
+            openGateBtn.className = 'community-open-gate-btn'; // Use existing class for styling
+            openGateBtn.addEventListener('click', () => {
+                openCommunityGate(selectedCommunity.name);
+                // Optionally, hide the main community menu after clicking
+                // const communityActionMenu = document.getElementById('communityActionMenu'); // Already declared above
+                if (communityActionMenu) {
+                    communityActionMenu.classList.add('hidden');
+                    communityActionMenu.classList.remove('community-action-menu-positioned');
+                }
+            });
+            externalOpenGateBtnContainer.appendChild(openGateBtn);
+        }
+    }
+}
+
+/**
  * Updates the username displayed in the UI (for the user menu).
  * Also sets the user circle initial and full name.
  * @param {string} username - The username to display.
@@ -105,10 +163,10 @@ async function checkLoginStatus() {
             currentUserId = data.userId;
             updateUserName(data.username);
             isAdmin = data.role === 'admin' || data.role === 'superuser';
+            const allowedUsersManagement = document.getElementById('allowedUsersManagement');
             if (isAdmin) {
-                document.getElementById('allowedUsersManagement').style.display = 'block';
+                if (allowedUsersManagement) allowedUsersManagement.classList.remove('hidden'); // CSP Refactor
             } else {
-                const allowedUsersManagement = document.getElementById('allowedUsersManagement');
                 if (allowedUsersManagement) {
                     allowedUsersManagement.remove();
                 }
@@ -185,6 +243,152 @@ function setupUIEventListeners() {
         addAddressBtn.addEventListener('click', addAddress);
     }
 
+    // Community Action Menu Logic
+    const communityMenuBtn = document.getElementById('communityMenuBtn');
+    const communityActionMenu = document.getElementById('communityActionMenu');
+
+    if (communityMenuBtn && communityActionMenu) {
+        communityMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+            const isActuallyHidden = communityActionMenu.classList.contains('hidden');
+            if (isActuallyHidden) {
+                communityActionMenu.classList.remove('hidden');
+                communityActionMenu.classList.add('community-action-menu-positioned');
+                // Dynamic positioning (Keep as per instructions)
+                const btnRect = communityMenuBtn.getBoundingClientRect();
+                communityActionMenu.style.left = btnRect.left + 'px'; 
+                communityActionMenu.style.top = (btnRect.top + 2) + 'px'; // Changed to use btnRect.top
+                communityActionMenu.classList.add('show'); // Add show class to trigger animation
+            } else {
+                communityActionMenu.classList.remove('show');
+                setTimeout(() => {
+                    communityActionMenu.classList.add('hidden');
+                    communityActionMenu.classList.remove('community-action-menu-positioned');
+                }, 200); // 200ms matches the CSS transition time
+            }
+        });
+
+        // Hide menu when clicking outside
+        document.addEventListener('click', (evt) => {
+            // Check if the menu is currently visible (not hidden and has 'show' class)
+            if (communityActionMenu.classList.contains('show') && // Check for 'show' instead of !.hidden
+                !communityActionMenu.contains(evt.target) && // Click is not inside the menu
+                evt.target !== communityMenuBtn) { // And click is not on the menu button itself
+                communityActionMenu.classList.remove('show');
+                setTimeout(() => {
+                    communityActionMenu.classList.add('hidden');
+                    communityActionMenu.classList.remove('community-action-menu-positioned');
+                }, 200);
+            }
+        });
+    }
+
+    // "Rename Community" option
+    const renameCommunityOption = document.getElementById('renameCommunityOption');
+    if (renameCommunityOption && renameCommunityOption.firstElementChild) {
+        renameCommunityOption.firstElementChild.addEventListener('click', async () => {
+            if (!selectedCommunity) return;
+            const newName = prompt('Enter new community name (no spaces allowed):', selectedCommunity.name);
+            if (newName && newName.trim() !== '' && !newName.includes(' ')) {
+                const oldName = selectedCommunity.name;
+                // Optimistically update UI
+                selectedCommunity.name = newName.trim();
+                document.getElementById('communityName').textContent = selectedCommunity.name;
+                const communityInArray = communities.find(c => c.id === selectedCommunity.id);
+                if (communityInArray) {
+                    communityInArray.name = selectedCommunity.name;
+                }
+                renderCommunities(); 
+                if (communityActionMenu) { // CSP Refactor
+                    communityActionMenu.classList.add('hidden');
+                    communityActionMenu.classList.remove('community-action-menu-positioned');
+                }
+
+                try {
+                    const response = await fetch(`/api/communities/${selectedCommunity.id}/name`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken,
+                        },
+                        body: JSON.stringify({ name: selectedCommunity.name }),
+                    });
+                    if (!response.ok) {
+                        // Revert on error
+                        selectedCommunity.name = oldName;
+                        document.getElementById('communityName').textContent = oldName;
+                        if (communityInArray) communityInArray.name = oldName;
+                        renderCommunities();
+                        const errorData = await response.json();
+                        alert(`Error renaming community: ${errorData.error || 'Unknown error'}`);
+                    }
+                } catch (error) {
+                    // Revert on error
+                    selectedCommunity.name = oldName;
+                    document.getElementById('communityName').textContent = oldName;
+                    if (communityInArray) communityInArray.name = oldName;
+                    renderCommunities();
+                    alert(`Error renaming community: ${error.message}`);
+                }
+            } else if (newName) { // newName is not null, so it means it was invalid
+                alert('Invalid community name. Ensure it is not empty and does not contain spaces.');
+            }
+        });
+    }
+
+    // "Remote Gate Control" toggle
+    const remoteGateControlToggle = document.getElementById('remoteGateControlToggle');
+    if (remoteGateControlToggle) {
+        remoteGateControlToggle.addEventListener('change', async () => {
+            if (!selectedCommunity) return;
+            const isEnabled = remoteGateControlToggle.checked;
+            selectedCommunity.remoteGateControlEnabled = isEnabled;
+            updateCommunityMenuView(); // Update UI (shows/hides open gate button in menu)
+
+            try {
+                const response = await fetch(`/api/communities/${selectedCommunity.id}/remote-gate-control`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken,
+                    },
+                    body: JSON.stringify({ enabled: isEnabled }),
+                });
+                if (!response.ok) {
+                    // Revert on error
+                    selectedCommunity.remoteGateControlEnabled = !isEnabled;
+                    remoteGateControlToggle.checked = !isEnabled;
+                    updateCommunityMenuView();
+                    const errorData = await response.json();
+                    alert(`Error updating remote gate control: ${errorData.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                // Revert on error
+                selectedCommunity.remoteGateControlEnabled = !isEnabled;
+                remoteGateControlToggle.checked = !isEnabled;
+                updateCommunityMenuView();
+                alert(`Error updating remote gate control: ${error.message}`);
+            }
+        });
+    }
+
+    // "Open Gate" button in menu
+    // const communityOpenGateMenuBtnContainer = document.getElementById('communityOpenGateMenuBtnContainer');
+    // if (communityOpenGateMenuBtnContainer && communityOpenGateMenuBtnContainer.firstElementChild) {
+    //     communityOpenGateMenuBtnContainer.firstElementChild.addEventListener('click', () => {
+    //         if (selectedCommunity && selectedCommunity.remoteGateControlEnabled) {
+    //             openCommunityGate(selectedCommunity.name);
+    //             if (communityActionMenu) { // CSP Refactor
+    //                 communityActionMenu.classList.add('hidden');
+    //                 communityActionMenu.classList.remove('community-action-menu-positioned');
+    //             }
+    //         } else if (selectedCommunity) {
+    //             // This case should ideally not be hit if the button is hidden when not enabled, but as a fallback:
+    //             alert('Remote gate control is not enabled for this community.');
+    //         }
+    //     });
+    // }
+
     // Refactored popup button event listeners
     const closeLogPopupBtn = document.getElementById('closeLogPopupBtn');
     if (closeLogPopupBtn) {
@@ -260,7 +464,7 @@ function setupUIEventListeners() {
                             address.codes.push(newCode);
                             renderCodes(address); // Re-render codes for that specific address
                         }
-                        addCodeModal.style.display = 'none'; // Hide modal
+                        addCodeModal.classList.remove('popup-visible'); // Hide modal using class
                         delete addCodeModal.dataset.addressId; // Clean up dataset
                     } else {
                         const errorData = await response.json();
@@ -292,7 +496,7 @@ function setupUIEventListeners() {
                 window.codeExpiryFlatpickr.clear();
             }
             
-            addCodeModal.style.display = 'none';
+            addCodeModal.classList.remove('popup-visible'); // Hide modal using class
             // Clean up dataset
             delete addCodeModal.dataset.addressId; 
         });
@@ -487,15 +691,16 @@ async function fetchData() {
         communities = await response.json();
         renderCommunities();
         const addAddressBtn = document.getElementById('addAddressBtn');
-        const addressesHeader = document.querySelector('main h3');
+        const addressesHeader = document.querySelector('main h3'); 
         if (communities.length > 0) {
-            addAddressBtn.style.display = 'block';
-            addressesHeader.style.display = 'block';
+            if (addAddressBtn) addAddressBtn.classList.remove('hidden'); // CSP Refactor
+            if (addressesHeader) addressesHeader.classList.remove('hidden'); // CSP Refactor
             selectCommunity(communities[0].id);
         } else {
-            addAddressBtn.style.display = 'none';
-            addressesHeader.style.display = 'none';
+            if (addAddressBtn) addAddressBtn.classList.add('hidden'); // CSP Refactor
+            if (addressesHeader) addressesHeader.classList.add('hidden'); // CSP Refactor
             document.getElementById('communityName').textContent = 'Please create a Community';
+            updateCommunityMenuView(); // Ensure menu is hidden if no communities
         }
         if (communities.length >= 8) {
             const addButton = document.getElementById('12');
@@ -578,13 +783,15 @@ function showLogs(communityName) {
         return;
     }
     if (window.logUpdateInterval) { clearInterval(window.logUpdateInterval); } // Clear existing refresh interval
+    const logPopupEl = document.getElementById('logPopup');
     document.getElementById('logPopupTitle').textContent = `Logs for ${communityName}`;
-    document.getElementById('logPopup').style.display = 'block';
+    if (logPopupEl) logPopupEl.classList.add('popup-visible'); // CSP Refactor
     updateLogs(communityName);
 
     // Set an interval to refresh logs every 10 seconds if the popup is still open
     window.logUpdateInterval = setInterval(() => {
-        if (document.getElementById('logPopup').style.display === 'block') {
+        const currentLogPopupEl = document.getElementById('logPopup'); // Re-fetch in case of DOM changes
+        if (currentLogPopupEl && currentLogPopupEl.classList.contains('popup-visible')) { // CSP Refactor
             updateLogs(communityName);
         } else {
             // If popup was closed by other means, clear this interval
@@ -606,7 +813,8 @@ function showLogs(communityName) {
  * Displays users in the system.
  */
 function showUsersPopup() {
-    document.getElementById('usersPopup').style.display = 'block';
+    const usersPopupEl = document.getElementById('usersPopup');
+    if (usersPopupEl) usersPopupEl.classList.add('popup-visible'); // CSP Refactor
     fetchUsers();
 }
 
@@ -615,7 +823,8 @@ function showUsersPopup() {
  */
 function closeLogPopup() {
     if (window.logPopupTimeout) { clearTimeout(window.logPopupTimeout); } // Clear auto-close timeout
-    document.getElementById('logPopup').style.display = 'none';
+    const logPopupEl = document.getElementById('logPopup');
+    if (logPopupEl) logPopupEl.classList.remove('popup-visible'); // CSP Refactor
     if (window.logUpdateInterval) {
         clearInterval(window.logUpdateInterval); // Clear any potential polling interval
     }
@@ -625,7 +834,8 @@ function closeLogPopup() {
  * Closes the user management popup.
  */
 function closeUsersPopup() {
-    document.getElementById('usersPopup').style.display = 'none';
+    const usersPopupEl = document.getElementById('usersPopup');
+    if (usersPopupEl) usersPopupEl.classList.remove('popup-visible'); // CSP Refactor
 }
 
 /**
@@ -663,9 +873,9 @@ function displayLogs(logs) {
         const timestamp = new Date(log.timestamp).toLocaleString();
 
         // If the log action contains "Access denied", style it in red; otherwise use the default.
-        const actionStyle = log.action.includes("Access denied")
-            ? 'color: #FF3B30;'
-            : 'color: var(--color-btn-add-bg);';
+        const actionStyle = log.action.toLowerCase().includes("denied")
+            ? 'color: #FF3B30;' // Red
+            : 'color: #32D74B;'; // Explicit green
 
         logEntry.innerHTML = `
             <span class="timestamp">${timestamp}</span><br>
@@ -720,9 +930,72 @@ function selectCommunity(communityId) {
     selectedCommunity = communities.find(c => c.id === communityId);
     selectedAddress = null;
     renderAddresses();
-    document.getElementById('communityName').textContent = selectedCommunity.name;
+
+    const communityNameElement = document.getElementById('communityName');
+    communityNameElement.textContent = selectedCommunity.name;
+
+    // Initialize remoteGateControlEnabled if it's not defined
+    if (typeof selectedCommunity.remoteGateControlEnabled === 'undefined') {
+        selectedCommunity.remoteGateControlEnabled = false; // Default to false
+    }
+
+    const communityMenuBtn = document.getElementById('communityMenuBtn');
+    // Visibility of communityMenuBtn is now handled by updateCommunityMenuView using classes.
+    // Ensure the menu itself is hidden by default when a new community is selected
+    const communityActionMenu = document.getElementById('communityActionMenu');
+    if (communityActionMenu) { // CSP Refactor
+        communityActionMenu.classList.add('hidden');
+        communityActionMenu.classList.remove('community-action-menu-positioned');
+    }
+    // Ensure the menu button is visible if a community is selected (handled by updateCommunityMenuView)
+    // const communityMenuBtn = document.getElementById('communityMenuBtn');
+    // if (communityMenuBtn) {
+    //      communityMenuBtn.classList.remove('hidden'); 
+    // }
+
+    updateCommunityMenuView(); // Update menu items based on selected community's state
+
     renderCommunities();
     renderAllowedUsers();
+}
+
+/**
+ * Sends a command to open the gate for the specified community.
+ * @param {string} communityName - The name of the community.
+ */
+async function openCommunityGate(communityName) {
+    if (!communityName) {
+        alert('No community specified for opening the gate.');
+        return;
+    }
+
+    if (!csrfToken) {
+        alert('CSRF token not available. Please refresh the page.');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/command/open-gate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ community: communityName }),
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            alert(data.message || `Gate command sent for ${communityName}`);
+        } else {
+            const errorData = await response.json();
+            alert(`Failed to send gate command: ${errorData.error || response.statusText}`);
+        }
+    } catch (error) {
+        console.error('Error sending gate command:', error);
+        alert('An error occurred while sending the gate command. Please check the console for details.');
+    }
 }
 
 /**
@@ -807,7 +1080,59 @@ function renderAddresses() {
             // Call renderUserIds and renderCodes to populate the respective lists
             renderUserIds(address);
             renderCodes(address);
+
+            // Add "Open Gate" button if address.hasGate is true
+            if (address.hasGate === true) {
+                const openGateAddressBtn = document.createElement('button');
+                openGateAddressBtn.textContent = 'Open Gate'; // Changed text content
+                openGateAddressBtn.className = 'add-btn address-open-gate-btn'; // Using 'add-btn' for existing styling, plus a specific class
+                openGateAddressBtn.addEventListener('click', () => openAddressGate(selectedCommunity.name, address.street));
+                // Ensure codesDiv is appended before this button for correct order
+                // The current structure already appends codesDiv to addressDetailsDiv before this block,
+                // and this button is also appended to addressDetailsDiv.
+                addressDetailsDiv.appendChild(openGateAddressBtn); 
+            }
         });
+    }
+}
+
+/**
+ * Sends a command to open the gate for a specific address within a community.
+ * @param {string} communityName - The name of the community.
+ * @param {string} streetAddress - The street address for which to open the gate.
+ */
+async function openAddressGate(communityName, streetAddress) {
+    if (!communityName || !streetAddress) {
+        alert('Community name and street address are required for opening the gate.');
+        return;
+    }
+
+    if (!csrfToken) {
+        alert('CSRF token not available. Please refresh the page.');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/command/open-gate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ community: communityName, address: streetAddress }),
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            alert(data.message || `Gate command sent for ${streetAddress} in ${communityName}`);
+        } else {
+            const errorData = await response.json();
+            alert(`Failed to send gate command for address: ${errorData.error || response.statusText}`);
+        }
+    } catch (error) {
+        console.error('Error sending address gate command:', error);
+        alert('An error occurred while sending the address gate command. Please check the console.');
     }
 }
 
@@ -957,6 +1282,7 @@ async function removeCommunity(communityId) {
                     addAddressBtn.style.display = 'none';
                     addressesHeader.style.display = 'none';
                     document.getElementById('communityName').textContent = 'Please create a Community';
+                    updateCommunityMenuView(); // Ensure menu is hidden if last community is removed
                 }
                 updateAddCommunityButtonVisibility();
             } else {
@@ -1003,6 +1329,10 @@ async function addAddress() {
     if (!selectedCommunity) return;
     const street = prompt('Enter address:');
     if (street) {
+        const hasGate = await promptForGateConfirmation(); // Modified this line
+        // If promptForGateConfirmation resolved to undefined (e.g. modal closed via ESC or other means not handled)
+        // default to false or handle as an abort. For now, let it proceed, which might result in 'undefined'.
+        // A more robust solution might involve the promise rejecting or resolving with a specific "abort" symbol.
         try {
             const response = await fetch(`/api/communities/${selectedCommunity.id}/addresses`, {
                 method: 'POST',
@@ -1010,7 +1340,7 @@ async function addAddress() {
                     'Content-Type': 'application/json',
                     'X-CSRF-Token': csrfToken
                 },
-                body: JSON.stringify({ street }),
+                body: JSON.stringify({ street, hasGate }), // Modified this line
                 credentials: 'include'
             });
             if (!response.ok) {
@@ -1243,7 +1573,11 @@ function renderAllowedUsers() {
     }
     const allowedUsersManagement = document.getElementById('allowedUsersManagement');
     if (allowedUsersManagement) {
-        allowedUsersManagement.style.display = selectedCommunity ? 'block' : 'none';
+        if (selectedCommunity && isAdmin) { // CSP Refactor: Only show if a community is selected AND user is admin
+            allowedUsersManagement.classList.remove('hidden');
+        } else {
+            allowedUsersManagement.classList.add('hidden');
+        }
     }
 }
 
@@ -1259,5 +1593,41 @@ function removeSelectedUsers() {
     updateAllowedUsers();
 }
 
+function promptForGateConfirmation() {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirmHasGateModal');
+        const yesBtn = document.getElementById('confirmHasGateYesBtn');
+        const noBtn = document.getElementById('confirmHasGateNoBtn');
+
+        // Function to handle cleanup
+        function cleanupAndResolve(value) {
+            modal.style.display = 'none';
+            // Clone and replace buttons to remove event listeners
+            // This is crucial to prevent multiple listeners from accumulating
+            // if the modal is shown multiple times.
+            const newYesBtn = yesBtn.cloneNode(true);
+            yesBtn.parentNode.replaceChild(newYesBtn, yesBtn);
+
+            const newNoBtn = noBtn.cloneNode(true);
+            noBtn.parentNode.replaceChild(newNoBtn, noBtn);
+            
+            resolve(value);
+        }
+
+        // Get the fresh button references for attaching events this time
+        const currentYesBtn = document.getElementById('confirmHasGateYesBtn');
+        const currentNoBtn = document.getElementById('confirmHasGateNoBtn');
+
+        currentYesBtn.onclick = () => cleanupAndResolve(true);
+        currentNoBtn.onclick = () => cleanupAndResolve(false);
+
+        // Optional: handle closing modal via ESC key or clicking outside
+        // For simplicity, this is omitted but could be added for better UX.
+
+        // Show the modal
+        modal.style.display = 'block';
+    });
+}
+
 // Fetch initial CSRF token and data (already set up in DOMContentLoaded above)
-fetchData();
+// fetchData(); // Called by checkLoginStatus

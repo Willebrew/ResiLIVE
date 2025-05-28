@@ -415,11 +415,146 @@ main {
     box-sizing: border-box;
 }
 
+/* Direct parent div of h2#communityName, button#communityMenuBtn, and span#externalOpenGateBtnContainer */
+main > div:first-child {
+    display: flex;
+    align-items: center;
+    /* If this div has other children that should not be flex items,
+       a more specific selector or a dedicated class/ID for the wrapper div would be better.
+       Assuming for now this div *only* wraps these three elements or this styling is acceptable for all its children. */
+}
+
 #communityName {
     font-size: 1.2em;
-    margin-bottom: 10px;
+    margin-bottom: 0; /* Adjusted as parent flex container handles alignment */
     color: var(--color-text);
+    /* Ensure h2 text itself is aligned if it had multiple lines, not strictly necessary for single line */
+    display: flex; 
+    align-items: center; 
 }
+
+/* Style for the new community menu button */
+#communityMenuBtn {
+    background: none;
+    border: none;
+    color: var(--color-text);
+    font-size: 1.5em; /* Larger for a more clickable icon appearance */
+    cursor: pointer;
+    padding: 0 5px; /* Minimal padding */
+    margin-left: 10px; /* Space between name and button */
+    line-height: 1; /* Ensure an icon font or text aligns well */
+    vertical-align: middle; /* Helps align with the H2 text if flex isn't perfectly centering */
+}
+
+#communityMenuBtn:hover {
+    opacity: 0.7;
+}
+
+/* Styles for the community action menu dropdown */
+#communityActionMenu {
+    position: absolute; /* Initial position, might be refined by JS if .community-action-menu-positioned is used */
+    /* z-index: 100; Will be handled by .community-action-menu-positioned */
+    background-color: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 10px;
+    min-width: 200px; /* Ensure enough width for options */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5); /* More pronounced shadow */
+    /* display: none; /* This line is removed, .hidden class in HTML will hide it */
+
+    /* Animation properties - start "hidden" */
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-10px);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* When .show is added (by JS, instead of just removing .hidden), fade/slide in */
+#communityActionMenu.show {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+#communityActionMenu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#communityActionMenu li {
+    margin-bottom: 8px; /* Space between menu items */
+}
+
+#communityActionMenu li:last-child {
+    margin-bottom: 0;
+}
+
+#communityActionMenu button {
+    background-color: var(--color-card); /* Match dropdown background */
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--btn-radius);
+    padding: 8px 12px;
+    width: 100%; /* Make buttons full width of menu */
+    text-align: center; /* Centered text for rename button */
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+#communityActionMenu button:hover {
+    background-color: #1c1c1c; /* Slightly lighter than card for hover */
+    border-color: #444; /* Lighter border on hover */
+}
+
+/* Specific styling for the remote gate control toggle and label */
+#communityActionMenu li label[for="remoteGateControlToggle"] {
+    display: flex; /* Use flex to align checkbox and text */
+    align-items: center;
+    justify-content: space-between; /* Pushes toggle to the right */
+    font-size: 0.9em;
+    color: var(--color-text);
+    cursor: pointer;
+    width: 100%; /* Ensure label takes full width to make space-between effective */
+}
+
+#remoteGateControlToggle {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    
+    width: 38px; /* Slightly wider to accommodate knob and movement */
+    height: 20px; /* Slightly taller */
+    background-color: #555; /* Dark grey for off state */
+    border-radius: 10px; /* Rounded track */
+    position: relative; /* For positioning the knob */
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    flex-shrink: 0; /* Prevent shrinking if label text is long */
+    margin-left: 10px; /* Space between label text and switch */
+}
+
+#remoteGateControlToggle::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 16px; /* Knob size */
+    height: 16px; /* Knob size */
+    background-color: white;
+    border-radius: 50%; /* Circular knob */
+    transition: transform 0.2s ease;
+}
+
+#remoteGateControlToggle:checked {
+    background-color: var(--color-btn-add-bg); /* Green background when checked */
+}
+
+#remoteGateControlToggle:checked::before {
+    transform: translateX(18px); /* (Track width - Knob width - 2*left_offset) = 38 - 16 - 4 = 18 */
+}
+
 
 h3 {
     margin: 10px 0;
@@ -505,7 +640,7 @@ h3 {
   POPUPS / MODALS
 *********************************************************/
 .popup {
-    display: none;
+    display: none; /* Default state for popups */
     position: fixed;
     z-index: 1000;
     left: 0;
@@ -743,4 +878,90 @@ h3 {
 
 #saveCodeBtn:hover {
     opacity: 0.8;
+}
+
+/********************************************************
+  OPEN GATE BUTTONS
+*********************************************************/
+.community-open-gate-btn {
+    background-color: var(--color-btn-primary-bg); /* from .topnav-btn */
+    color: var(--color-btn-primary-text);       /* from .topnav-btn */
+    border: none;                               /* from .topnav-btn */
+    border-radius: var(--btn-radius);           /* from .topnav-btn */
+    cursor: pointer;                            /* from .topnav-btn */
+    padding: 8px 16px;                          /* from .topnav-btn */
+    font-size: 0.9em;                           /* from .topnav-btn */
+    transition: background-color 0.3s;          /* from .topnav-btn */
+    display: inline-block;                      /* For positioning */
+    margin-left: 10px;                          /* Space from community name */
+    vertical-align: middle;                     /* Align with H2 text */
+}
+
+.community-open-gate-btn:hover {
+    background-color: #e8e8e8; /* from .topnav-btn:hover */
+}
+
+/*
+  Style for the "Open Gate for Address" button.
+  Using button.address-open-gate-btn for added specificity to override .add-btn if both are present.
+*/
+button.address-open-gate-btn {
+    background-color: var(--color-btn-primary-bg); /* White background */
+    color: var(--color-btn-primary-text);       /* Black text */
+    border: none;                               /* No border, matches .add-btn */
+    border-radius: var(--btn-radius);           /* Pill shape, matches .add-btn */
+    cursor: pointer;                            /* Standard pointer */
+    padding: 6px 12px;                          /* Matches .add-btn size */
+    font-size: 0.85em;                          /* Matches .add-btn size */
+    transition: background-color 0.3s, opacity 0.2s; /* Standard transitions */
+    display: inline-block;                      /* Changed from block */
+    margin-top: 10px;                           /* Space above this button */
+    margin-left: 20px;                          /* Added for left alignment */
+    /* text-align: center; removed, not applicable for inline-block as such */
+    /* width: auto; good for inline-block */
+}
+
+button.address-open-gate-btn:hover {
+    background-color: #e8e8e8; /* Slightly darker white on hover, like .topnav-btn */
+    opacity: 0.8; /* Retain opacity effect if needed */
+}
+
+/* Styling for the custom confirmation modal buttons */
+#confirmHasGateYesBtn {
+    background-color: var(--color-btn-add-bg); /* Green */
+    color: var(--color-btn-add-text);
+    border: none;
+    border-radius: var(--btn-radius);
+    cursor: pointer;
+    font-size: 0.9em;
+    padding: 8px 16px;
+    transition: opacity 0.2s;
+}
+
+#confirmHasGateYesBtn:hover {
+    opacity: 0.8;
+}
+
+/********************************************************
+  CSP UTILITY CLASSES
+*********************************************************/
+.hidden {
+    display: none !important;
+}
+
+/* .visible class might be used for elements that need a specific display type 
+   other than their default when un-hidden, e.g. display: flex.
+   For simple block, removing .hidden might be enough. */
+.visible {
+    display: block !important; 
+}
+
+.popup-visible {
+    display: block !important; /* For popups that are display:none by default via .popup */
+}
+
+.community-action-menu-positioned {
+    position: absolute;
+    z-index: 100; 
+    /* top, left will be set by JS if still needed, or handled by more specific positioning logic if possible */
 }
