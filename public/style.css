@@ -311,11 +311,8 @@ h1, h2, h3, h4, p {
     cursor: pointer;
     font-size: 0.85em;
     padding: 6px 12px;
-    margin: 0 auto;
-    display: block;
+    margin-right: 5px;
     transition: opacity 0.2s;
-    width: 36px; /* Fixed width for consistent centering */
-    text-align: center;
 }
 
 .add-btn {
@@ -346,6 +343,16 @@ h1, h2, h3, h4, p {
     cursor: pointer;
     margin: 10px auto 0;
     display: block;
+}
+
+/* Centered add buttons */
+#communityList + .add-btn,
+#addAddressBtn {
+    display: block;
+    width: 36px;
+    margin: 10px auto 0;
+    text-align: center;
+    padding: 6px 0;
 }
 
 .remove-btn-sidebar {
@@ -399,7 +406,7 @@ h1, h2, h3, h4, p {
     border-radius: var(--radius);
     color: var(--color-text);
     padding: 6px;
-    margin: 10px 0;
+    margin-bottom: 10px;
     font-size: 0.9em;
 }
 
