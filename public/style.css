@@ -345,6 +345,16 @@ h1, h2, h3, h4, p {
     display: block;
 }
 
+/* Centered add buttons */
+#communityList + .add-btn,
+#addAddressBtn {
+    display: block;
+    width: 36px;
+    margin: 10px auto 0;
+    text-align: center;
+    padding: 6px 0;
+}
+
 .remove-btn-sidebar {
     background-color: var(--color-btn-remove-bg); /* red background */
     color: var(--color-btn-remove-text);           /* white text */
