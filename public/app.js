@@ -873,9 +873,9 @@ function displayLogs(logs) {
         const timestamp = new Date(log.timestamp).toLocaleString();
 
         // If the log action contains "Access denied", style it in red; otherwise use the default.
-        const actionStyle = log.action.includes("Access denied")
-            ? 'color: #FF3B30;'
-            : 'color: var(--color-btn-add-bg);';
+        const actionStyle = log.action.toLowerCase().includes("denied")
+            ? 'color: #FF3B30;' // Red
+            : 'color: #32D74B;'; // Explicit green
 
         logEntry.innerHTML = `
             <span class="timestamp">${timestamp}</span><br>
