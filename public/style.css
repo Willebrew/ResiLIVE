@@ -415,11 +415,20 @@ main {
     box-sizing: border-box;
 }
 
+/* Direct parent div of h2#communityName, button#communityMenuBtn, and span#externalOpenGateBtnContainer */
+main > div:first-child {
+    display: flex;
+    align-items: center;
+    /* If this div has other children that should not be flex items,
+       a more specific selector or a dedicated class/ID for the wrapper div would be better.
+       Assuming for now this div *only* wraps these three elements or this styling is acceptable for all its children. */
+}
+
 #communityName {
     font-size: 1.2em;
-    margin-bottom: 10px;
+    margin-bottom: 0; /* Adjusted as parent flex container handles alignment */
     color: var(--color-text);
-    /* Ensure h2 and button are on the same line and vertically centered */
+    /* Ensure h2 text itself is aligned if it had multiple lines, not strictly necessary for single line */
     display: flex; 
     align-items: center; 
 }
@@ -475,7 +484,7 @@ main {
     border-radius: var(--btn-radius);
     padding: 8px 12px;
     width: 100%; /* Make buttons full width of menu */
-    text-align: left;
+    text-align: center; /* Centered text for rename button */
     cursor: pointer;
     font-size: 0.9em;
     transition: background-color 0.2s, border-color 0.2s;
@@ -490,13 +499,16 @@ main {
 #communityActionMenu li label[for="remoteGateControlToggle"] {
     display: flex; /* Use flex to align checkbox and text */
     align-items: center;
+    justify-content: space-between; /* Pushes toggle to the right */
     font-size: 0.9em;
     color: var(--color-text);
     cursor: pointer;
+    width: 100%; /* Ensure label takes full width to make space-between effective */
 }
 
 #remoteGateControlToggle {
-    margin-right: 8px; /* Space between checkbox and label text */
+    /* margin-right: 8px; Removed, space-between on label handles spacing */
+    /* Consider adding a small margin-left if needed, e.g., margin-left: 10px; */
     cursor: pointer;
     /* Custom styling for checkbox can be added here if desired,
        but default rendering is often fine and theme-consistent. */
