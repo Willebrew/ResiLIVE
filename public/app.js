@@ -78,6 +78,39 @@ async function fetchCsrfToken() {
 }
 
 /**
+ * Updates the view of the community action menu (checkbox and Open Gate button visibility).
+ */
+function updateCommunityMenuView() {
+    const communityMenuBtn = document.getElementById('communityMenuBtn');
+    const communityActionMenu = document.getElementById('communityActionMenu'); 
+    const communityOpenGateMenuBtnContainer = document.getElementById('communityOpenGateMenuBtnContainer'); 
+
+    if (!selectedCommunity) {
+        if (communityMenuBtn) communityMenuBtn.classList.add('hidden');
+        if (communityActionMenu) {
+            communityActionMenu.classList.add('hidden');
+            communityActionMenu.classList.remove('community-action-menu-positioned');
+        }
+        // Ensure the gate button container is also hidden if no community
+        if (communityOpenGateMenuBtnContainer) communityOpenGateMenuBtnContainer.classList.add('hidden'); 
+        return;
+    }
+
+    // If a community is selected, the menu button should be visible
+    if (communityMenuBtn) communityMenuBtn.classList.remove('hidden');
+
+    const remoteGateControlToggle = document.getElementById('remoteGateControlToggle');
+    if (remoteGateControlToggle) {
+        remoteGateControlToggle.checked = !!selectedCommunity.remoteGateControlEnabled;
+    }
+
+    if (communityOpenGateMenuBtnContainer) {
+        // Use toggle for cleaner add/remove based on condition
+        communityOpenGateMenuBtnContainer.classList.toggle('hidden', !selectedCommunity.remoteGateControlEnabled);
+    }
+}
+
+/**
  * Updates the username displayed in the UI (for the user menu).
  * Also sets the user circle initial and full name.
  * @param {string} username - The username to display.
@@ -105,10 +138,10 @@ async function checkLoginStatus() {
             currentUserId = data.userId;
             updateUserName(data.username);
             isAdmin = data.role === 'admin' || data.role === 'superuser';
+            const allowedUsersManagement = document.getElementById('allowedUsersManagement');
             if (isAdmin) {
-                document.getElementById('allowedUsersManagement').style.display = 'block';
+                if (allowedUsersManagement) allowedUsersManagement.classList.remove('hidden'); // CSP Refactor
             } else {
-                const allowedUsersManagement = document.getElementById('allowedUsersManagement');
                 if (allowedUsersManagement) {
                     allowedUsersManagement.remove();
                 }
@@ -183,6 +216,145 @@ function setupUIEventListeners() {
     const addAddressBtn = document.getElementById('addAddressBtn');
     if (addAddressBtn) {
         addAddressBtn.addEventListener('click', addAddress);
+    }
+
+    // Community Action Menu Logic
+    const communityMenuBtn = document.getElementById('communityMenuBtn');
+    const communityActionMenu = document.getElementById('communityActionMenu');
+
+    if (communityMenuBtn && communityActionMenu) {
+        communityMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+            const isActuallyHidden = communityActionMenu.classList.contains('hidden');
+            if (isActuallyHidden) {
+                communityActionMenu.classList.remove('hidden');
+                communityActionMenu.classList.add('community-action-menu-positioned');
+                // Dynamic positioning (Keep as per instructions)
+                const btnRect = communityMenuBtn.getBoundingClientRect();
+                communityActionMenu.style.left = btnRect.left + 'px'; 
+                communityActionMenu.style.top = btnRect.bottom + 'px'; 
+            } else {
+                communityActionMenu.classList.add('hidden');
+                communityActionMenu.classList.remove('community-action-menu-positioned');
+            }
+        });
+
+        // Hide menu when clicking outside
+        document.addEventListener('click', (evt) => {
+            // Check if the menu is currently visible (not hidden)
+            if (!communityActionMenu.classList.contains('hidden') &&
+                !communityActionMenu.contains(evt.target) && // Click is not inside the menu
+                evt.target !== communityMenuBtn) { // And click is not on the menu button itself
+                communityActionMenu.classList.add('hidden');
+                communityActionMenu.classList.remove('community-action-menu-positioned');
+            }
+        });
+    }
+
+    // "Rename Community" option
+    const renameCommunityOption = document.getElementById('renameCommunityOption');
+    if (renameCommunityOption && renameCommunityOption.firstElementChild) {
+        renameCommunityOption.firstElementChild.addEventListener('click', async () => {
+            if (!selectedCommunity) return;
+            const newName = prompt('Enter new community name (no spaces allowed):', selectedCommunity.name);
+            if (newName && newName.trim() !== '' && !newName.includes(' ')) {
+                const oldName = selectedCommunity.name;
+                // Optimistically update UI
+                selectedCommunity.name = newName.trim();
+                document.getElementById('communityName').textContent = selectedCommunity.name;
+                const communityInArray = communities.find(c => c.id === selectedCommunity.id);
+                if (communityInArray) {
+                    communityInArray.name = selectedCommunity.name;
+                }
+                renderCommunities(); 
+                if (communityActionMenu) { // CSP Refactor
+                    communityActionMenu.classList.add('hidden');
+                    communityActionMenu.classList.remove('community-action-menu-positioned');
+                }
+
+                try {
+                    const response = await fetch(`/api/communities/${selectedCommunity.id}/name`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken,
+                        },
+                        body: JSON.stringify({ name: selectedCommunity.name }),
+                    });
+                    if (!response.ok) {
+                        // Revert on error
+                        selectedCommunity.name = oldName;
+                        document.getElementById('communityName').textContent = oldName;
+                        if (communityInArray) communityInArray.name = oldName;
+                        renderCommunities();
+                        const errorData = await response.json();
+                        alert(`Error renaming community: ${errorData.error || 'Unknown error'}`);
+                    }
+                } catch (error) {
+                    // Revert on error
+                    selectedCommunity.name = oldName;
+                    document.getElementById('communityName').textContent = oldName;
+                    if (communityInArray) communityInArray.name = oldName;
+                    renderCommunities();
+                    alert(`Error renaming community: ${error.message}`);
+                }
+            } else if (newName) { // newName is not null, so it means it was invalid
+                alert('Invalid community name. Ensure it is not empty and does not contain spaces.');
+            }
+        });
+    }
+
+    // "Remote Gate Control" toggle
+    const remoteGateControlToggle = document.getElementById('remoteGateControlToggle');
+    if (remoteGateControlToggle) {
+        remoteGateControlToggle.addEventListener('change', async () => {
+            if (!selectedCommunity) return;
+            const isEnabled = remoteGateControlToggle.checked;
+            selectedCommunity.remoteGateControlEnabled = isEnabled;
+            updateCommunityMenuView(); // Update UI (shows/hides open gate button in menu)
+
+            try {
+                const response = await fetch(`/api/communities/${selectedCommunity.id}/remote-gate-control`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken,
+                    },
+                    body: JSON.stringify({ enabled: isEnabled }),
+                });
+                if (!response.ok) {
+                    // Revert on error
+                    selectedCommunity.remoteGateControlEnabled = !isEnabled;
+                    remoteGateControlToggle.checked = !isEnabled;
+                    updateCommunityMenuView();
+                    const errorData = await response.json();
+                    alert(`Error updating remote gate control: ${errorData.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                // Revert on error
+                selectedCommunity.remoteGateControlEnabled = !isEnabled;
+                remoteGateControlToggle.checked = !isEnabled;
+                updateCommunityMenuView();
+                alert(`Error updating remote gate control: ${error.message}`);
+            }
+        });
+    }
+
+    // "Open Gate" button in menu
+    const communityOpenGateMenuBtnContainer = document.getElementById('communityOpenGateMenuBtnContainer');
+    if (communityOpenGateMenuBtnContainer && communityOpenGateMenuBtnContainer.firstElementChild) {
+        communityOpenGateMenuBtnContainer.firstElementChild.addEventListener('click', () => {
+            if (selectedCommunity && selectedCommunity.remoteGateControlEnabled) {
+                openCommunityGate(selectedCommunity.name);
+                if (communityActionMenu) { // CSP Refactor
+                    communityActionMenu.classList.add('hidden');
+                    communityActionMenu.classList.remove('community-action-menu-positioned');
+                }
+            } else if (selectedCommunity) {
+                // This case should ideally not be hit if the button is hidden when not enabled, but as a fallback:
+                alert('Remote gate control is not enabled for this community.');
+            }
+        });
     }
 
     // Refactored popup button event listeners
@@ -260,7 +432,7 @@ function setupUIEventListeners() {
                             address.codes.push(newCode);
                             renderCodes(address); // Re-render codes for that specific address
                         }
-                        addCodeModal.style.display = 'none'; // Hide modal
+                        addCodeModal.classList.remove('popup-visible'); // Hide modal using class
                         delete addCodeModal.dataset.addressId; // Clean up dataset
                     } else {
                         const errorData = await response.json();
@@ -292,7 +464,7 @@ function setupUIEventListeners() {
                 window.codeExpiryFlatpickr.clear();
             }
             
-            addCodeModal.style.display = 'none';
+            addCodeModal.classList.remove('popup-visible'); // Hide modal using class
             // Clean up dataset
             delete addCodeModal.dataset.addressId; 
         });
@@ -487,15 +659,16 @@ async function fetchData() {
         communities = await response.json();
         renderCommunities();
         const addAddressBtn = document.getElementById('addAddressBtn');
-        const addressesHeader = document.querySelector('main h3');
+        const addressesHeader = document.querySelector('main h3'); 
         if (communities.length > 0) {
-            addAddressBtn.style.display = 'block';
-            addressesHeader.style.display = 'block';
+            if (addAddressBtn) addAddressBtn.classList.remove('hidden'); // CSP Refactor
+            if (addressesHeader) addressesHeader.classList.remove('hidden'); // CSP Refactor
             selectCommunity(communities[0].id);
         } else {
-            addAddressBtn.style.display = 'none';
-            addressesHeader.style.display = 'none';
+            if (addAddressBtn) addAddressBtn.classList.add('hidden'); // CSP Refactor
+            if (addressesHeader) addressesHeader.classList.add('hidden'); // CSP Refactor
             document.getElementById('communityName').textContent = 'Please create a Community';
+            updateCommunityMenuView(); // Ensure menu is hidden if no communities
         }
         if (communities.length >= 8) {
             const addButton = document.getElementById('12');
@@ -578,13 +751,15 @@ function showLogs(communityName) {
         return;
     }
     if (window.logUpdateInterval) { clearInterval(window.logUpdateInterval); } // Clear existing refresh interval
+    const logPopupEl = document.getElementById('logPopup');
     document.getElementById('logPopupTitle').textContent = `Logs for ${communityName}`;
-    document.getElementById('logPopup').style.display = 'block';
+    if (logPopupEl) logPopupEl.classList.add('popup-visible'); // CSP Refactor
     updateLogs(communityName);
 
     // Set an interval to refresh logs every 10 seconds if the popup is still open
     window.logUpdateInterval = setInterval(() => {
-        if (document.getElementById('logPopup').style.display === 'block') {
+        const currentLogPopupEl = document.getElementById('logPopup'); // Re-fetch in case of DOM changes
+        if (currentLogPopupEl && currentLogPopupEl.classList.contains('popup-visible')) { // CSP Refactor
             updateLogs(communityName);
         } else {
             // If popup was closed by other means, clear this interval
@@ -606,7 +781,8 @@ function showLogs(communityName) {
  * Displays users in the system.
  */
 function showUsersPopup() {
-    document.getElementById('usersPopup').style.display = 'block';
+    const usersPopupEl = document.getElementById('usersPopup');
+    if (usersPopupEl) usersPopupEl.classList.add('popup-visible'); // CSP Refactor
     fetchUsers();
 }
 
@@ -615,7 +791,8 @@ function showUsersPopup() {
  */
 function closeLogPopup() {
     if (window.logPopupTimeout) { clearTimeout(window.logPopupTimeout); } // Clear auto-close timeout
-    document.getElementById('logPopup').style.display = 'none';
+    const logPopupEl = document.getElementById('logPopup');
+    if (logPopupEl) logPopupEl.classList.remove('popup-visible'); // CSP Refactor
     if (window.logUpdateInterval) {
         clearInterval(window.logUpdateInterval); // Clear any potential polling interval
     }
@@ -625,7 +802,8 @@ function closeLogPopup() {
  * Closes the user management popup.
  */
 function closeUsersPopup() {
-    document.getElementById('usersPopup').style.display = 'none';
+    const usersPopupEl = document.getElementById('usersPopup');
+    if (usersPopupEl) usersPopupEl.classList.remove('popup-visible'); // CSP Refactor
 }
 
 /**
@@ -724,23 +902,26 @@ function selectCommunity(communityId) {
     const communityNameElement = document.getElementById('communityName');
     communityNameElement.textContent = selectedCommunity.name;
 
-    // Remove existing open gate button if any
-    const existingOpenGateBtn = document.getElementById('communityOpenGateBtn');
-    if (existingOpenGateBtn) {
-        existingOpenGateBtn.remove();
+    // Initialize remoteGateControlEnabled if it's not defined
+    if (typeof selectedCommunity.remoteGateControlEnabled === 'undefined') {
+        selectedCommunity.remoteGateControlEnabled = false; // Default to false
     }
 
-    // Create and add the "Open Gate" button
-    if (selectedCommunity) { // Only add if a community is truly selected
-        const openGateBtn = document.createElement('button');
-        openGateBtn.textContent = 'Open Gate';
-        openGateBtn.className = 'community-open-gate-btn'; // For styling
-        openGateBtn.id = 'communityOpenGateBtn'; // For removal
-        openGateBtn.addEventListener('click', () => openCommunityGate(selectedCommunity.name));
-        
-        // Insert the button after the H2 element for community name
-        communityNameElement.parentNode.insertBefore(openGateBtn, communityNameElement.nextSibling);
+    const communityMenuBtn = document.getElementById('communityMenuBtn');
+    // Visibility of communityMenuBtn is now handled by updateCommunityMenuView using classes.
+    // Ensure the menu itself is hidden by default when a new community is selected
+    const communityActionMenu = document.getElementById('communityActionMenu');
+    if (communityActionMenu) { // CSP Refactor
+        communityActionMenu.classList.add('hidden');
+        communityActionMenu.classList.remove('community-action-menu-positioned');
     }
+    // Ensure the menu button is visible if a community is selected (handled by updateCommunityMenuView)
+    // const communityMenuBtn = document.getElementById('communityMenuBtn');
+    // if (communityMenuBtn) {
+    //      communityMenuBtn.classList.remove('hidden'); 
+    // }
+
+    updateCommunityMenuView(); // Update menu items based on selected community's state
 
     renderCommunities();
     renderAllowedUsers();
@@ -1069,6 +1250,7 @@ async function removeCommunity(communityId) {
                     addAddressBtn.style.display = 'none';
                     addressesHeader.style.display = 'none';
                     document.getElementById('communityName').textContent = 'Please create a Community';
+                    updateCommunityMenuView(); // Ensure menu is hidden if last community is removed
                 }
                 updateAddCommunityButtonVisibility();
             } else {
@@ -1359,7 +1541,11 @@ function renderAllowedUsers() {
     }
     const allowedUsersManagement = document.getElementById('allowedUsersManagement');
     if (allowedUsersManagement) {
-        allowedUsersManagement.style.display = selectedCommunity ? 'block' : 'none';
+        if (selectedCommunity && isAdmin) { // CSP Refactor: Only show if a community is selected AND user is admin
+            allowedUsersManagement.classList.remove('hidden');
+        } else {
+            allowedUsersManagement.classList.add('hidden');
+        }
     }
 }
 
