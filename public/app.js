@@ -78,14 +78,14 @@ async function fetchCsrfToken() {
 }
 
 /**
- * Updates the view of the community action menu (checkbox and Open Gate button visibility).
+ * Updates the view of the community action menu (checkbox and Trigger Relay button visibility).
  */
 function updateCommunityMenuView() {
     const communityMenuBtn = document.getElementById('communityMenuBtn');
     const communityActionMenu = document.getElementById('communityActionMenu'); 
     const communityOpenGateMenuBtnContainer = document.getElementById('communityOpenGateMenuBtnContainer'); 
 
-    // Ensure the old menu item for "Open Gate" is definitely hidden
+    // Ensure the old menu item for "Trigger Relay" is definitely hidden
     if (communityOpenGateMenuBtnContainer) {
         communityOpenGateMenuBtnContainer.classList.add('hidden');
     }
@@ -119,7 +119,7 @@ function updateCommunityMenuView() {
         externalOpenGateBtnContainer.innerHTML = ''; // Clear any previous button
         if (selectedCommunity && selectedCommunity.remoteGateControlEnabled) {
             const openGateBtn = document.createElement('button');
-            openGateBtn.textContent = 'Open Gate';
+            openGateBtn.textContent = 'Trigger Relay';
             openGateBtn.className = 'community-open-gate-btn'; // Use existing class for styling
             openGateBtn.addEventListener('click', () => {
                 openCommunityGate(selectedCommunity.name);
@@ -343,7 +343,7 @@ function setupUIEventListeners() {
             if (!selectedCommunity) return;
             const isEnabled = remoteGateControlToggle.checked;
             selectedCommunity.remoteGateControlEnabled = isEnabled;
-            updateCommunityMenuView(); // Update UI (shows/hides open gate button in menu)
+            updateCommunityMenuView(); // Update UI (shows/hides Trigger Relay button in menu)
 
             try {
                 const response = await fetch(`/api/communities/${selectedCommunity.id}/remote-gate-control`, {
@@ -372,7 +372,7 @@ function setupUIEventListeners() {
         });
     }
 
-    // "Open Gate" button in menu
+    // "Trigger Relay" button in menu
     // const communityOpenGateMenuBtnContainer = document.getElementById('communityOpenGateMenuBtnContainer');
     // if (communityOpenGateMenuBtnContainer && communityOpenGateMenuBtnContainer.firstElementChild) {
     //     communityOpenGateMenuBtnContainer.firstElementChild.addEventListener('click', () => {
@@ -1065,10 +1065,10 @@ function renderAddresses() {
             renderUserIds(address);
             renderCodes(address);
 
-            // Add "Open Gate" button if address.hasGate is true
+            // Add "Trigger Relay" button if address.hasGate is true
             if (address.hasGate === true) {
                 const openGateAddressBtn = document.createElement('button');
-                openGateAddressBtn.textContent = 'Open Gate'; // Changed text content
+                openGateAddressBtn.textContent = 'Trigger Relay'; // Changed text content
                 openGateAddressBtn.className = 'add-btn address-open-gate-btn'; // Using 'add-btn' for existing styling, plus a specific class
                 openGateAddressBtn.addEventListener('click', () => openAddressGate(selectedCommunity.name, address.street));
                 // Ensure codesDiv is appended before this button for correct order
