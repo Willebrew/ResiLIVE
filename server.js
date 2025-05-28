@@ -149,6 +149,107 @@ app.use((req, res, next) => {
     }
 });
 
+// Route to update a community's remote gate control status
+app.put('/api/communities/:communityId/remote-gate-control', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const { communityId } = req.params;
+        const { enabled } = req.body; // Expecting 'enabled' from the client-side code
+
+        // Validation for enabled
+        if (typeof enabled !== 'boolean') {
+            return res.status(400).json({ error: 'enabled field is required and must be a boolean.' });
+        }
+
+        const communityRef = db.collection('communities').doc(communityId);
+        const communityDoc = await communityRef.get();
+
+        if (!communityDoc.exists) {
+            return res.status(404).json({ error: 'Community not found' });
+        }
+
+        await communityRef.update({
+            remoteGateControlEnabled: enabled, // Update the correct field name
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Fetch the updated document to include in the response
+        const updatedCommunityDoc = await communityRef.get();
+
+        res.status(200).json({
+            message: 'Remote gate control status updated successfully',
+            community: { id: updatedCommunityDoc.id, ...updatedCommunityDoc.data() }
+        });
+
+    } catch (error) {
+        // console.error('Error updating remote gate control status:', error); // errorHandler already logs
+        errorHandler(res, error, 'Error updating remote gate control status');
+    }
+});
+
+// Route to update a community's name
+app.put('/api/communities/:communityId/name', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const { communityId } = req.params;
+        const { name } = req.body;
+
+        // Validation for name
+        if (!name || typeof name !== 'string' || name.trim() === '') {
+            return res.status(400).json({ error: 'New name is required and must be a non-empty string.' });
+        }
+        if (/\s/.test(name)) { // Checks for any whitespace characters
+            return res.status(400).json({ error: 'Community name cannot contain spaces.' });
+        }
+
+        // Check for duplicate name (excluding the current community if its name isn't changing)
+        const communitiesRef = db.collection('communities');
+        const snapshot = await communitiesRef.where('name', '==', name).get();
+        
+        let duplicateExists = false;
+        if (!snapshot.empty) {
+            snapshot.forEach(doc => {
+                if (doc.id !== communityId) { // If a different community has this name
+                    duplicateExists = true;
+                }
+            });
+        }
+        if (duplicateExists) {
+            return res.status(409).json({ error: 'A community with this name already exists.' });
+        }
+
+        const communityRef = db.collection('communities').doc(communityId);
+        const communityDoc = await communityRef.get();
+
+        if (!communityDoc.exists) {
+            return res.status(404).json({ error: 'Community not found' });
+        }
+
+        await communityRef.update({
+            name: name,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Fetch the updated document to include in the response
+        const updatedCommunityDoc = await communityRef.get();
+        const responseCommunityData = { 
+            id: updatedCommunityDoc.id, 
+            ...updatedCommunityDoc.data(),
+            // Ensure createdAt and updatedAt are consistently formatted if needed,
+            // Firestore timestamps are objects, convert to ISO string for client if necessary.
+            // For now, sending what Firestore returns is fine.
+        };
+
+
+        res.status(200).json({
+            message: 'Community name updated successfully',
+            community: responseCommunityData
+        });
+
+    } catch (error) {
+        // console.error('Error updating community name:', error); // errorHandler already logs
+        errorHandler(res, error, 'Error updating community name');
+    }
+});
+
 // Route to open a gate
 app.post('/api/command/open-gate', requireAuth, async (req, res) => {
     const { community, address } = req.body; // address is optional
@@ -464,6 +565,7 @@ app.post('/api/communities', requireAuth, requireAdmin, async (req, res) => {
             name: req.body.name,
             addresses: [],
             allowedUsers: req.body.allowedUsers || [],
+            remoteGateControlEnabled: false, // Added field with default value
             createdAt: admin.firestore.FieldValue.serverTimestamp()
         };
 
