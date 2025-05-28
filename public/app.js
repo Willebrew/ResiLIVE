@@ -257,21 +257,28 @@ function setupUIEventListeners() {
                 // Dynamic positioning (Keep as per instructions)
                 const btnRect = communityMenuBtn.getBoundingClientRect();
                 communityActionMenu.style.left = btnRect.left + 'px'; 
-                communityActionMenu.style.top = btnRect.bottom + 'px'; 
+                communityActionMenu.style.top = (btnRect.bottom + 5) + 'px'; // Added +5 for offset
+                communityActionMenu.classList.add('show'); // Add show class to trigger animation
             } else {
-                communityActionMenu.classList.add('hidden');
-                communityActionMenu.classList.remove('community-action-menu-positioned');
+                communityActionMenu.classList.remove('show');
+                setTimeout(() => {
+                    communityActionMenu.classList.add('hidden');
+                    communityActionMenu.classList.remove('community-action-menu-positioned');
+                }, 200); // 200ms matches the CSS transition time
             }
         });
 
         // Hide menu when clicking outside
         document.addEventListener('click', (evt) => {
-            // Check if the menu is currently visible (not hidden)
-            if (!communityActionMenu.classList.contains('hidden') &&
+            // Check if the menu is currently visible (not hidden and has 'show' class)
+            if (communityActionMenu.classList.contains('show') && // Check for 'show' instead of !.hidden
                 !communityActionMenu.contains(evt.target) && // Click is not inside the menu
                 evt.target !== communityMenuBtn) { // And click is not on the menu button itself
-                communityActionMenu.classList.add('hidden');
-                communityActionMenu.classList.remove('community-action-menu-positioned');
+                communityActionMenu.classList.remove('show');
+                setTimeout(() => {
+                    communityActionMenu.classList.add('hidden');
+                    communityActionMenu.classList.remove('community-action-menu-positioned');
+                }, 200);
             }
         });
     }
