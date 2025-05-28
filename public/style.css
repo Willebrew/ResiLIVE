@@ -520,11 +520,39 @@ main > div:first-child {
 }
 
 #remoteGateControlToggle {
-    /* margin-right: 8px; Removed, space-between on label handles spacing */
-    /* Consider adding a small margin-left if needed, e.g., margin-left: 10px; */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    
+    width: 38px; /* Slightly wider to accommodate knob and movement */
+    height: 20px; /* Slightly taller */
+    background-color: #555; /* Dark grey for off state */
+    border-radius: 10px; /* Rounded track */
+    position: relative; /* For positioning the knob */
     cursor: pointer;
-    /* Custom styling for checkbox can be added here if desired,
-       but default rendering is often fine and theme-consistent. */
+    transition: background-color 0.2s ease;
+    flex-shrink: 0; /* Prevent shrinking if label text is long */
+    margin-left: 10px; /* Space between label text and switch */
+}
+
+#remoteGateControlToggle::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 16px; /* Knob size */
+    height: 16px; /* Knob size */
+    background-color: white;
+    border-radius: 50%; /* Circular knob */
+    transition: transform 0.2s ease;
+}
+
+#remoteGateControlToggle:checked {
+    background-color: var(--color-btn-add-bg); /* Green background when checked */
+}
+
+#remoteGateControlToggle:checked::before {
+    transform: translateX(18px); /* (Track width - Knob width - 2*left_offset) = 38 - 16 - 4 = 18 */
 }
 
 
