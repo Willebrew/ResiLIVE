@@ -464,8 +464,7 @@ function setupUIEventListeners() {
                             address.codes.push(newCode);
                             renderCodes(address); // Re-render codes for that specific address
                         }
-                        addCodeModal.classList.remove('popup-visible'); // Hide modal using class
-                        delete addCodeModal.dataset.addressId; // Clean up dataset
+                        closeAddCodeModal(); // Use helper function to close and clean up
                     } else {
                         const errorData = await response.json();
                         console.error('Failed to add code:', errorData.error || response.statusText);
@@ -484,22 +483,7 @@ function setupUIEventListeners() {
     // Event listener for "Cancel" button in the Add Code Modal
     const cancelAddCodeBtn = document.getElementById('cancelAddCodeBtn');
     if (cancelAddCodeBtn) {
-        cancelAddCodeBtn.addEventListener('click', () => {
-            const addCodeModal = document.getElementById('addCodeModal');
-            const codeDescriptionInput = document.getElementById('codeDescriptionInput');
-            const codeValueInput = document.getElementById('codeValueInput');
-            
-            // Clear fields
-            codeDescriptionInput.value = '';
-            codeValueInput.value = '';
-            if (window.codeExpiryFlatpickr) {
-                window.codeExpiryFlatpickr.clear();
-            }
-            
-            addCodeModal.classList.remove('popup-visible'); // Hide modal using class
-            // Clean up dataset
-            delete addCodeModal.dataset.addressId; 
-        });
+        cancelAddCodeBtn.addEventListener('click', closeAddCodeModal);
     }
 }
 
@@ -1455,6 +1439,31 @@ async function removeUserId(addressId, userIdId) {
 }
 
 /**
+ * Closes the Add Code modal and cleans up
+ */
+function closeAddCodeModal() {
+    const addCodeModal = document.getElementById('addCodeModal');
+    const codeDescriptionInput = document.getElementById('codeDescriptionInput');
+    const codeValueInput = document.getElementById('codeValueInput');
+    
+    // Clear fields
+    codeDescriptionInput.value = '';
+    codeValueInput.value = '';
+    
+    // Clear and destroy Flatpickr
+    if (window.codeExpiryFlatpickr) {
+        window.codeExpiryFlatpickr.clear();
+        window.codeExpiryFlatpickr.destroy();
+        window.codeExpiryFlatpickr = null;
+    }
+    
+    // Hide modal using class
+    addCodeModal.classList.remove('popup-visible');
+    // Clean up dataset
+    delete addCodeModal.dataset.addressId;
+}
+
+/**
  * Adds a new code to an address.
  * @param {string} addressId - The ID of the address.
  */
@@ -1467,7 +1476,7 @@ async function addCode(addressId) {
     // Clear previous values
     codeDescriptionInput.value = '';
     codeValueInput.value = '';
-    codeExpiryInput.value = ''; // Also clear the visual input of Flatpickr
+    codeExpiryInput.value = '';
 
     // Store addressId in the modal's dataset to be accessible by the save button's event handler
     addCodeModal.dataset.addressId = addressId;
@@ -1476,15 +1485,17 @@ async function addCode(addressId) {
     if (window.codeExpiryFlatpickr) {
         window.codeExpiryFlatpickr.destroy();
     }
+    
     // Initialize Flatpickr on the expiry input
     window.codeExpiryFlatpickr = flatpickr(codeExpiryInput, {
         enableTime: true,
-        dateFormat: "Y-m-d H:i", // Format for the actual input value (submitted)
-        altInput: true,          // Shows a human-friendly date in a new input field
-        altFormat: "F j, Y H:i", // How the human-friendly date will look
+        dateFormat: "Y-m-d H:i",
+        altInput: true,
+        altFormat: "F j, Y H:i",
     });
 
-    addCodeModal.style.display = 'block';
+    // Show modal using class
+    addCodeModal.classList.add('popup-visible');
 }
 
 /**
