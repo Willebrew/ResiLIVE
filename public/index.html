@@ -75,10 +75,25 @@
 
     <!-- Main Content -->
     <main>
-        <h2 id="communityName">Please create a Community</h2>
-        <h3>Addresses:</h3>
+        <div> <!-- Wrapper div, its flex properties are now handled by #communityName CSS if needed or default block flow -->
+            <h2 id="communityName">Please create a Community</h2>
+            <button id="communityMenuBtn">&#8942;</button> <!-- Kebab icon, styles in CSS -->
+            <span id="externalOpenGateBtnContainer"></span>
+        </div>
+        <!-- The community action menu -->
+        <div id="communityActionMenu" class="hidden"> <!-- Initially hidden, styles in CSS -->
+            <ul>
+                <li id="renameCommunityOption"><button>Rename Community</button></li>
+                <li>
+                    <label for="remoteGateControlToggle">Remote Gate Control:</label>
+                    <input type="checkbox" id="remoteGateControlToggle" />
+                </li>
+                <li id="communityOpenGateMenuBtnContainer"><button>Open Gate</button></li>
+            </ul>
+        </div>
+        <h3 class="hidden">Addresses:</h3>
         <ul id="addressList"></ul>
-        <button id="addAddressBtn" class="add-btn">+</button>
+        <button id="addAddressBtn" class="add-btn hidden">+</button>
 
         <!-- Address details container (shown/hidden in app.js) -->
         <div id="addressDetails"></div>
@@ -128,6 +143,18 @@
         <div class="popup-buttons">
             <button id="saveCodeBtn" class="action-btn">Save Code</button>
             <button id="cancelAddCodeBtn" class="close-btn-popup">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Has Gate Modal -->
+<div id="confirmHasGateModal" class="popup">
+    <div class="popup-content">
+        <h2>Confirm Gate</h2>
+        <p>Does this address have a gate?</p>
+        <div class="popup-buttons">
+            <button id="confirmHasGateYesBtn" class="action-btn">Yes</button>
+            <button id="confirmHasGateNoBtn" class="close-btn-popup">No</button>
         </div>
     </div>
 </div>
