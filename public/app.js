@@ -85,6 +85,11 @@ function updateCommunityMenuView() {
     const communityActionMenu = document.getElementById('communityActionMenu'); 
     const communityOpenGateMenuBtnContainer = document.getElementById('communityOpenGateMenuBtnContainer'); 
 
+    // Ensure the old menu item for "Open Gate" is definitely hidden
+    if (communityOpenGateMenuBtnContainer) {
+        communityOpenGateMenuBtnContainer.classList.add('hidden');
+    }
+
     if (!selectedCommunity) {
         if (communityMenuBtn) communityMenuBtn.classList.add('hidden');
         if (communityActionMenu) {
@@ -104,9 +109,29 @@ function updateCommunityMenuView() {
         remoteGateControlToggle.checked = !!selectedCommunity.remoteGateControlEnabled;
     }
 
-    if (communityOpenGateMenuBtnContainer) {
-        // Use toggle for cleaner add/remove based on condition
-        communityOpenGateMenuBtnContainer.classList.toggle('hidden', !selectedCommunity.remoteGateControlEnabled);
+    // if (communityOpenGateMenuBtnContainer) {
+    //     // Use toggle for cleaner add/remove based on condition
+    //     communityOpenGateMenuBtnContainer.classList.toggle('hidden', !selectedCommunity.remoteGateControlEnabled);
+    // }
+
+    const externalOpenGateBtnContainer = document.getElementById('externalOpenGateBtnContainer');
+    if (externalOpenGateBtnContainer) {
+        externalOpenGateBtnContainer.innerHTML = ''; // Clear any previous button
+        if (selectedCommunity && selectedCommunity.remoteGateControlEnabled) {
+            const openGateBtn = document.createElement('button');
+            openGateBtn.textContent = 'Open Gate';
+            openGateBtn.className = 'community-open-gate-btn'; // Use existing class for styling
+            openGateBtn.addEventListener('click', () => {
+                openCommunityGate(selectedCommunity.name);
+                // Optionally, hide the main community menu after clicking
+                // const communityActionMenu = document.getElementById('communityActionMenu'); // Already declared above
+                if (communityActionMenu) {
+                    communityActionMenu.classList.add('hidden');
+                    communityActionMenu.classList.remove('community-action-menu-positioned');
+                }
+            });
+            externalOpenGateBtnContainer.appendChild(openGateBtn);
+        }
     }
 }
 
@@ -341,21 +366,21 @@ function setupUIEventListeners() {
     }
 
     // "Open Gate" button in menu
-    const communityOpenGateMenuBtnContainer = document.getElementById('communityOpenGateMenuBtnContainer');
-    if (communityOpenGateMenuBtnContainer && communityOpenGateMenuBtnContainer.firstElementChild) {
-        communityOpenGateMenuBtnContainer.firstElementChild.addEventListener('click', () => {
-            if (selectedCommunity && selectedCommunity.remoteGateControlEnabled) {
-                openCommunityGate(selectedCommunity.name);
-                if (communityActionMenu) { // CSP Refactor
-                    communityActionMenu.classList.add('hidden');
-                    communityActionMenu.classList.remove('community-action-menu-positioned');
-                }
-            } else if (selectedCommunity) {
-                // This case should ideally not be hit if the button is hidden when not enabled, but as a fallback:
-                alert('Remote gate control is not enabled for this community.');
-            }
-        });
-    }
+    // const communityOpenGateMenuBtnContainer = document.getElementById('communityOpenGateMenuBtnContainer');
+    // if (communityOpenGateMenuBtnContainer && communityOpenGateMenuBtnContainer.firstElementChild) {
+    //     communityOpenGateMenuBtnContainer.firstElementChild.addEventListener('click', () => {
+    //         if (selectedCommunity && selectedCommunity.remoteGateControlEnabled) {
+    //             openCommunityGate(selectedCommunity.name);
+    //             if (communityActionMenu) { // CSP Refactor
+    //                 communityActionMenu.classList.add('hidden');
+    //                 communityActionMenu.classList.remove('community-action-menu-positioned');
+    //             }
+    //         } else if (selectedCommunity) {
+    //             // This case should ideally not be hit if the button is hidden when not enabled, but as a fallback:
+    //             alert('Remote gate control is not enabled for this community.');
+    //         }
+    //     });
+    // }
 
     // Refactored popup button event listeners
     const closeLogPopupBtn = document.getElementById('closeLogPopupBtn');
