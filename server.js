@@ -286,7 +286,13 @@ app.post('/api/command/open-gate', requireAuth, async (req, res) => {
 
         if (success) {
             // Log the successful command attempt
-            await logAccess(community, req.session.username, `Sent command: open_gate (Address: ${address || 'N/A'})`);
+            let logMessage;
+            if (address) {
+                logMessage = `Sent command: open_gate (Address: ${address})`;
+            } else {
+                logMessage = `Sent command: open_gate for community`;
+            }
+            await logAccess(community, req.session.username, logMessage);
             res.json({ message: 'Gate command sent successfully' });
         } else {
             res.json({ message: 'Gate command sent successfully' });
