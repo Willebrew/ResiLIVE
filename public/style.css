@@ -461,6 +461,19 @@ main > div:first-child {
     min-width: 200px; /* Ensure enough width for options */
     box-shadow: 0 4px 12px rgba(0,0,0,0.5); /* More pronounced shadow */
     /* display: none; /* This line is removed, .hidden class in HTML will hide it */
+
+    /* Animation properties - start "hidden" */
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-10px);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* When .show is added (by JS, instead of just removing .hidden), fade/slide in */
+#communityActionMenu.show {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
 }
 
 #communityActionMenu ul {
