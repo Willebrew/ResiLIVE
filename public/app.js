@@ -855,16 +855,20 @@ function displayLogs(logs) {
         const logEntry = document.createElement('div');
         logEntry.className = 'log-entry';
         const timestamp = new Date(log.timestamp).toLocaleString();
+        
+        let actionClass = 'action-allowed'; // Default to allowed (green)
+        // Ensure log.action exists and is a string before calling toLowerCase()
+        if (log.action && typeof log.action === 'string' && log.action.toLowerCase().includes("denied")) {
+            actionClass = 'action-denied'; // Set to denied (red) if applicable
+        }
 
-        // If the log action contains "Access denied", style it in red; otherwise use the default.
-        const actionStyle = log.action.toLowerCase().includes("denied")
-            ? 'color: #FF3B30;' // Red
-            : 'color: #32D74B;'; // Explicit green
+        // Ensure log.action is a string for safe display in innerHTML; display number as is.
+        const actionText = (typeof log.action === 'string' || typeof log.action === 'number') ? log.action : '(empty action)';
 
         logEntry.innerHTML = `
             <span class="timestamp">${timestamp}</span><br>
             <span class="player">${log.player}</span>: 
-            <span class="action" style="${actionStyle}">${log.action}</span>
+            <span class="action ${actionClass}">${actionText}</span>
         `;
         logContent.appendChild(logEntry);
     });

@@ -722,7 +722,15 @@ h3 {
 }
 
 .log-entry .action {
-    color: var(--color-btn-add-bg);
+    color: var(--color-btn-add-bg); /* This is #32D74B, green */
+}
+
+.log-entry .action.action-denied {
+    color: #FF3B30; /* Red */
+}
+
+.log-entry .action.action-allowed {
+    color: #32D74B; /* Green */
 }
 
 /********************************************************
