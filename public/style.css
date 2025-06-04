@@ -248,6 +248,7 @@ h1, h2, h3, h4, p {
         height: calc(100% - var(--topbar-height));
         z-index: 1000;
         transform: translateX(-100%);
+        width: var(--sidebar-width);
     }
     .sidebar.sidebar-open {
         transform: translateX(0);
@@ -387,32 +388,61 @@ h1, h2, h3, h4, p {
     font-size: 1em;
 }
 
-#allowedUsersDropdown {
+#allowedUsersList {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 10px 0;
+    max-height: 150px;
+    overflow-y: auto;
     width: 100%;
-    min-height: 60px;
-    border: 1px solid var(--color-border);
+}
+
+.allowed-user-item {
     background-color: #111111;
+    border: 1px solid var(--color-border);
     border-radius: var(--radius);
-    color: var(--color-text);
-    padding: 6px;
-    margin-bottom: 10px;
-    font-size: 0.9em;
+    margin-bottom: 5px;
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    animation: fadeSlideIn 0.3s ease;
+}
+
+.allowed-user-item button {
+    background-color: var(--color-btn-remove-bg);
+    color: var(--color-btn-remove-text);
+    border: none;
+    border-radius: var(--btn-radius);
+    padding: 4px 8px;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.allowed-user-item button:hover {
+    opacity: 0.8;
+}
+
+.add-user-row {
+    display: flex;
+    gap: 6px;
+    width: 100%;
 }
 
 #allowedUsersInput {
-    width: 100%;
+    flex-grow: 1;
     border: 1px solid var(--color-border);
     background-color: #111111;
     border-radius: var(--radius);
     color: var(--color-text);
     padding: 6px;
-    margin-bottom: 10px;
     font-size: 0.9em;
 }
 
-.button-group {
-    display: flex;
-    justify-content: space-between;
+@keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /********************************************************

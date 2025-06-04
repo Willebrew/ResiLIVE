@@ -81,11 +81,10 @@
             <!-- Allowed Users management block (admin only) -->
             <div id="allowedUsersManagement">
                 <h3>Allowed Users</h3>
-                <select id="allowedUsersDropdown" multiple></select>
-                <input type="text" id="allowedUsersInput" placeholder="Add usernames here">
-                <div class="button-group">
+                <ul id="allowedUsersList" class="allowed-users-list"></ul>
+                <div class="add-user-row">
+                    <input type="text" id="allowedUsersInput" placeholder="Add username">
                     <button id="updateAllowedUsersBtn" class="add-btn">Add</button>
-                    <button id="removeSelectedUsersBtn" class="remove-btn-user">Remove</button>
                 </div>
             </div>
         </div>

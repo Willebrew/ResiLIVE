@@ -416,10 +416,6 @@ function setupUIEventListeners() {
         updateAllowedUsersBtn.addEventListener('click', updateAllowedUsers);
     }
 
-    const removeSelectedUsersBtn = document.getElementById('removeSelectedUsersBtn');
-    if (removeSelectedUsersBtn) {
-        removeSelectedUsersBtn.addEventListener('click', removeSelectedUsers);
-    }
 
     // Event listener for "Save Code" button in the Add Code Modal
     const saveCodeBtn = document.getElementById('saveCodeBtn');
@@ -1575,15 +1571,22 @@ async function updateAllowedUsers() {
  * Renders the list of allowed users for the selected community.
  */
 function renderAllowedUsers() {
-    const allowedUsersDropdown = document.getElementById('allowedUsersDropdown');
-    if (!allowedUsersDropdown) return;
-    allowedUsersDropdown.innerHTML = '';
+    const allowedUsersList = document.getElementById('allowedUsersList');
+    if (!allowedUsersList) return;
+    allowedUsersList.innerHTML = '';
     if (selectedCommunity && selectedCommunity.allowedUsers) {
         selectedCommunity.allowedUsers.forEach(user => {
-            const option = document.createElement('option');
-            option.value = user;
-            option.textContent = user;
-            allowedUsersDropdown.appendChild(option);
+            const li = document.createElement('li');
+            li.className = 'allowed-user-item';
+            const span = document.createElement('span');
+            span.textContent = user;
+            const removeBtn = document.createElement('button');
+            removeBtn.textContent = '✖';
+            removeBtn.className = 'remove-btn-user';
+            removeBtn.addEventListener('click', () => removeAllowedUser(user));
+            li.appendChild(span);
+            li.appendChild(removeBtn);
+            allowedUsersList.appendChild(li);
         });
     }
     const allowedUsersManagement = document.getElementById('allowedUsersManagement');
@@ -1597,14 +1600,11 @@ function renderAllowedUsers() {
 }
 
 /**
- * Removes the selected users from the allowed users list and updates the server.
+ * Removes a specific user from the allowed users list and updates the server.
+ * @param {string} user - Username to remove
  */
-function removeSelectedUsers() {
-    const allowedUsersDropdown = document.getElementById('allowedUsersDropdown');
-    if (!allowedUsersDropdown) return;
-    Array.from(allowedUsersDropdown.selectedOptions).forEach(option => {
-        selectedCommunity.allowedUsers = selectedCommunity.allowedUsers.filter(u => u !== option.value);
-    });
+function removeAllowedUser(user) {
+    selectedCommunity.allowedUsers = selectedCommunity.allowedUsers.filter(u => u !== user);
     updateAllowedUsers();
 }
 
