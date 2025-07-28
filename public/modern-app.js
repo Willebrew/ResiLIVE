@@ -6,11 +6,11 @@
 const ThemeManager = {
     themes: ['dark', 'light', 'ocean', 'forest'],
     currentTheme: 'dark',
+    isAuthenticated: false,
     
     init() {
-        // Load saved theme or default to dark
-        this.currentTheme = localStorage.getItem('resilive-theme') || 'dark';
-        this.applyTheme(this.currentTheme);
+        // Don't apply theme yet - wait for auth check
+        // Just setup the UI handlers
         
         // Setup settings dropdown
         const settingsButton = document.getElementById('settingsButton');
@@ -54,7 +54,12 @@ const ThemeManager = {
         }
     },
     
-    applyTheme(theme) {
+    setAuthenticated(isAuth) {
+        this.isAuthenticated = isAuth;
+    },
+    
+    // Apply initial theme without saving
+    applyInitialTheme(theme) {
         this.currentTheme = theme;
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('resilive-theme', theme);
@@ -67,6 +72,49 @@ const ThemeManager = {
                 option.classList.remove('active');
             }
         });
+    },
+    
+    async applyTheme(theme, skipSave = false) {
+        this.currentTheme = theme;
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('resilive-theme', theme);
+        
+        // Update active state in dropdown
+        document.querySelectorAll('.theme-option').forEach(option => {
+            if (option.getAttribute('data-theme') === theme) {
+                option.classList.add('active');
+            } else {
+                option.classList.remove('active');
+            }
+        });
+        
+        // Save to Firestore if authenticated and not skipping save
+        if (this.isAuthenticated && !skipSave) {
+            try {
+                // Use global csrfToken if available, otherwise fetch it
+                let token = window.csrfToken;
+                if (!token) {
+                    const csrfResponse = await fetch('/csrf-token');
+                    const csrfData = await csrfResponse.json();
+                    token = csrfData.csrfToken;
+                }
+                
+                const response = await fetch('/api/user/theme', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': token
+                    },
+                    body: JSON.stringify({ theme })
+                });
+                
+                if (!response.ok) {
+                    console.error('Failed to save theme preference to server:', await response.text());
+                }
+            } catch (error) {
+                console.error('Error saving theme preference:', error);
+            }
+        }
     },
     
 };
@@ -198,26 +246,12 @@ const MicroInteractions = {
     
     createNotification(message, type) {
         const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
+        notification.className = `notification notification-${type} notification-toast`;
         notification.textContent = message;
-        
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 16px 24px;
-            background: ${type === 'success' ? 'var(--color-success)' : 'var(--color-danger)'};
-            color: white;
-            border-radius: var(--radius-md);
-            box-shadow: var(--shadow-lg);
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
-            z-index: 10000;
-        `;
         
         // Trigger animation
         setTimeout(() => {
-            notification.style.transform = 'translateX(0)';
+            notification.classList.add('notification-show');
         }, 10);
         
         return notification;
