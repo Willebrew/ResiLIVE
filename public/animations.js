@@ -161,7 +161,7 @@ const AnimationUtils = {
                 button.disabled = true;
                 button.dataset.originalText = originalText || button.textContent;
                 button.innerHTML = `
-                    <div class="loading-spinner" style="width: 16px; height: 16px; border-width: 2px; margin-right: 8px; display: inline-block;"></div>
+                    <div class="loading-spinner loading-spinner-inline"></div>
                     Loading...
                 `;
             } else {
