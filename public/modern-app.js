@@ -5,75 +5,55 @@
 // Theme Management
 const ThemeManager = {
     themes: ['dark', 'light', 'ocean', 'forest'],
-    currentThemeIndex: 0,
+    currentTheme: 'dark',
     
     init() {
         // Load saved theme or default to dark
-        const savedTheme = localStorage.getItem('resilive-theme') || 'dark';
-        const themeIndex = this.themes.indexOf(savedTheme);
-        this.currentThemeIndex = themeIndex >= 0 ? themeIndex : 0;
-        this.applyTheme(this.themes[this.currentThemeIndex]);
+        this.currentTheme = localStorage.getItem('resilive-theme') || 'dark';
+        this.applyTheme(this.currentTheme);
         
-        // Setup theme toggle
-        const themeToggle = document.getElementById('themeToggle');
-        if (themeToggle) {
-            themeToggle.addEventListener('click', () => this.toggleTheme());
+        // Setup theme dropdown
+        const themeButton = document.getElementById('themeButton');
+        const themeDropdown = document.getElementById('themeDropdown');
+        
+        if (themeButton && themeDropdown) {
+            // Toggle dropdown
+            themeButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                themeDropdown.classList.toggle('hidden');
+            });
+            
+            // Theme option clicks
+            document.querySelectorAll('.theme-option').forEach(option => {
+                option.addEventListener('click', (e) => {
+                    const theme = e.currentTarget.getAttribute('data-theme');
+                    this.applyTheme(theme);
+                    themeDropdown.classList.add('hidden');
+                });
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', () => {
+                themeDropdown.classList.add('hidden');
+            });
         }
     },
     
     applyTheme(theme) {
+        this.currentTheme = theme;
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('resilive-theme', theme);
-        this.updateThemeIcon(theme);
+        
+        // Update active state in dropdown
+        document.querySelectorAll('.theme-option').forEach(option => {
+            if (option.getAttribute('data-theme') === theme) {
+                option.classList.add('active');
+            } else {
+                option.classList.remove('active');
+            }
+        });
     },
     
-    toggleTheme() {
-        this.currentThemeIndex = (this.currentThemeIndex + 1) % this.themes.length;
-        const newTheme = this.themes[this.currentThemeIndex];
-        this.applyTheme(newTheme);
-        
-        // Add rotation animation to toggle button
-        const themeToggle = document.getElementById('themeToggle');
-        themeToggle.style.transform = 'scale(1.1) rotate(180deg)';
-        setTimeout(() => {
-            themeToggle.style.transform = '';
-        }, 300);
-    },
-    
-    updateThemeIcon(theme) {
-        const themeToggle = document.getElementById('themeToggle');
-        if (!themeToggle) return;
-        
-        // Update icon based on theme
-        const svg = themeToggle.querySelector('svg');
-        if (theme === 'light') {
-            svg.innerHTML = `
-                <circle cx="12" cy="12" r="5"></circle>
-                <line x1="12" y1="1" x2="12" y2="3"></line>
-                <line x1="12" y1="21" x2="12" y2="23"></line>
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                <line x1="1" y1="12" x2="3" y2="12"></line>
-                <line x1="21" y1="12" x2="23" y2="12"></line>
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-            `;
-        } else if (theme === 'ocean') {
-            svg.innerHTML = `
-                <path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"></path>
-            `;
-        } else if (theme === 'forest') {
-            svg.innerHTML = `
-                <path d="M12 3l4.5 9H7.5L12 3z"></path>
-                <path d="M12 7l3 6H9l3-6z"></path>
-            `;
-        } else {
-            // Dark theme - moon icon
-            svg.innerHTML = `
-                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
-            `;
-        }
-    }
 };
 
 // Dashboard Manager
@@ -195,6 +175,9 @@ const DashboardManager = {
         const updateDashboardVisibility = () => {
             const dashboard = document.getElementById('dashboard');
             const communityDetails = document.getElementById('communityDetails');
+            const communityName = document.getElementById('communityName');
+            
+            if (!dashboard || !communityDetails) return;
             
             if (selectedCommunity) {
                 dashboard.classList.add('hidden');
@@ -202,18 +185,29 @@ const DashboardManager = {
             } else {
                 dashboard.classList.remove('hidden');
                 communityDetails.classList.add('hidden');
+                // Update community name to prompt
+                if (communityName) {
+                    communityName.textContent = 'Please select a community';
+                    communityName.classList.remove('hidden');
+                }
             }
         };
         
-        // Listen for community selection changes
-        const originalSelectCommunity = window.selectCommunity;
-        window.selectCommunity = function(community) {
-            originalSelectCommunity.call(this, community);
-            updateDashboardVisibility();
-        };
+        // Override the selectCommunity function
+        if (typeof window.selectCommunity === 'function') {
+            const originalSelectCommunity = window.selectCommunity;
+            window.selectCommunity = function(community) {
+                originalSelectCommunity.call(this, community);
+                updateDashboardVisibility();
+                // Update stats when community is selected
+                if (window.ModernEnhancements && window.ModernEnhancements.DashboardManager) {
+                    window.ModernEnhancements.DashboardManager.updateDashboardStats();
+                }
+            };
+        }
         
         // Initial visibility
-        updateDashboardVisibility();
+        setTimeout(() => updateDashboardVisibility(), 100);
     },
     
     destroy() {
@@ -392,6 +386,22 @@ document.addEventListener('DOMContentLoaded', () => {
     ThemeManager.init();
     DashboardManager.init();
     MicroInteractions.init();
+    
+    // Hook into existing data loading
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+        return originalFetch.apply(this, args).then(response => {
+            // Update dashboard when communities are loaded
+            if (args[0] === '/api/communities' && response.ok) {
+                setTimeout(() => {
+                    if (window.ModernEnhancements && window.ModernEnhancements.DashboardManager) {
+                        window.ModernEnhancements.DashboardManager.updateDashboardStats();
+                    }
+                }, 100);
+            }
+            return response;
+        });
+    };
 });
 
 // Export for use in main app.js

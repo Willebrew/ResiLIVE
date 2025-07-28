@@ -14,9 +14,28 @@ const SearchComponent = {
     },
     
     createSearchUI() {
+        // Add search button to topbar
+        const topbarLeft = document.querySelector('.topbar-left');
+        if (topbarLeft) {
+            const searchToggleBtn = document.createElement('button');
+            searchToggleBtn.id = 'searchToggleBtn';
+            searchToggleBtn.className = 'topnav-btn';
+            searchToggleBtn.innerHTML = `
+                <span class="search-btn-icon">🔍</span>
+                <span class="search-btn-text">Search</span>
+            `;
+            searchToggleBtn.addEventListener('click', () => this.toggleSearch());
+            
+            // Insert after the subtitle
+            const subtitle = topbarLeft.querySelector('.subtitle');
+            if (subtitle && subtitle.parentNode) {
+                subtitle.parentNode.insertBefore(searchToggleBtn, subtitle.nextSibling);
+            }
+        }
+        
         // Create search container
         const searchContainer = document.createElement('div');
-        searchContainer.className = 'search-container glass-card';
+        searchContainer.className = 'search-container hidden';
         searchContainer.innerHTML = `
             <div class="search-wrapper">
                 <svg class="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -382,6 +401,16 @@ const SearchComponent = {
                 setTimeout(() => codeElement.classList.remove('highlight-flash'), 2000);
             }
         }, 800);
+    },
+    
+    toggleSearch() {
+        const searchContainer = document.querySelector('.search-container');
+        if (searchContainer) {
+            searchContainer.classList.toggle('hidden');
+            if (!searchContainer.classList.contains('hidden')) {
+                this.searchInput.focus();
+            }
+        }
     }
 };
 
