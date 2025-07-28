@@ -1290,6 +1290,27 @@ app.delete('/api/communities/:communityId/addresses/:addressId/codes/:codeId', r
 });
 
 // Route to get logs for a community
+app.get('/api/logs/today-count', requireAuth, async (req, res) => {
+    try {
+        // Get today's start and end timestamps
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        // Query Firestore for today's logs count
+        const logsSnapshot = await db.collection('access_logs')
+            .where('timestamp', '>=', admin.firestore.Timestamp.fromDate(today))
+            .where('timestamp', '<', admin.firestore.Timestamp.fromDate(tomorrow))
+            .get();
+        
+        res.json({ count: logsSnapshot.size });
+    } catch (error) {
+        console.error('Error fetching today\'s access count:', error);
+        res.status(500).json({ error: 'Failed to fetch access count' });
+    }
+});
+
 app.get('/api/communities/:name/logs', requireAuth, async (req, res) => {
     const communityName = req.params.name;
     try {
