@@ -567,7 +567,9 @@ function renderUsers() {
             const roleButton = document.createElement('button');
             roleButton.className = `role-btn ${user.role === 'admin' ? 'admin' : 'user'}`;
             roleButton.title = user.role === 'admin' ? 'Remove admin' : 'Make admin';
-            roleButton.textContent = user.role === 'admin' ? '👑' : '👤';
+            roleButton.innerHTML = user.role === 'admin' ? 
+                '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg>' : 
+                '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>';
             roleButton.addEventListener('click', () => toggleUserRole(user.id));
             controlsDiv.appendChild(roleButton);
 
@@ -920,16 +922,9 @@ function selectCommunity(communityId) {
     renderAddresses();
 
     const communityNameElement = document.getElementById('communityName');
-    const dashboard = document.getElementById('dashboard');
-    const communityDetails = document.getElementById('communityDetails');
     
     if (selectedCommunity) {
         communityNameElement.textContent = selectedCommunity.name;
-        if (dashboard) dashboard.classList.add('hidden');
-        if (communityDetails) communityDetails.classList.remove('hidden');
-    } else {
-        if (dashboard) dashboard.classList.remove('hidden');
-        if (communityDetails) communityDetails.classList.add('hidden');
     }
 
     // Initialize remoteGateControlEnabled if it's not defined
