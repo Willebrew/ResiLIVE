@@ -14,23 +14,22 @@ const SearchComponent = {
     },
     
     createSearchUI() {
-        // Add search button to topbar
-        const topbarLeft = document.querySelector('.topbar-left');
-        if (topbarLeft) {
+        // Add search button to topbar right
+        const topbarRight = document.querySelector('.topbar-right');
+        if (topbarRight) {
             const searchToggleBtn = document.createElement('button');
             searchToggleBtn.id = 'searchToggleBtn';
             searchToggleBtn.className = 'topnav-btn';
             searchToggleBtn.innerHTML = `
-                <span class="search-btn-icon">🔍</span>
+                <svg class="search-btn-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+                </svg>
                 <span class="search-btn-text">Search</span>
             `;
             searchToggleBtn.addEventListener('click', () => this.toggleSearch());
             
-            // Insert after the subtitle
-            const subtitle = topbarLeft.querySelector('.subtitle');
-            if (subtitle && subtitle.parentNode) {
-                subtitle.parentNode.insertBefore(searchToggleBtn, subtitle.nextSibling);
-            }
+            // Insert as first button in topbar-right
+            topbarRight.insertBefore(searchToggleBtn, topbarRight.firstChild);
         }
         
         // Create search container
