@@ -13,9 +13,25 @@
     --swirl-duration: 30s;         /* Duration for one full rotation */
 }
 
-/* Basic reset */
+/* Basic reset and touch optimization */
 * {
     box-sizing: border-box;
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+}
+
+/* Prevent zooming on input focus and double-tap */
+input, select, textarea, button {
+    font-size: 16px !important;
+}
+
+html, body {
+    touch-action: pan-x pan-y;
+    height: 100%;
+    overflow-x: hidden;
+    position: fixed;
+    width: 100%;
 }
 
 /* Swirling rainbow gradient background */
