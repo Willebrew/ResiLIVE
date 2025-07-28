@@ -1,0 +1,172 @@
+/********************************************************
+  LIQUID GLASS EFFECTS - POPUPS AND DROPDOWNS ONLY
+*********************************************************/
+
+/* Enhanced glass variables */
+:root {
+    /* Liquid glass properties for dropdowns/popups only */
+    --liquid-bg: rgba(20, 20, 20, 0.85);
+    --liquid-bg-hover: rgba(30, 30, 30, 0.85);
+    --liquid-border: rgba(255, 255, 255, 0.1);
+    --liquid-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --liquid-shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.4);
+    --liquid-blur: blur(20px);
+    --liquid-blur-lg: blur(30px);
+}
+
+/* Light theme liquid glass adjustments */
+[data-theme="light"] {
+    --liquid-bg: rgba(255, 255, 255, 0.7);
+    --liquid-bg-hover: rgba(255, 255, 255, 0.85);
+    --liquid-border: rgba(0, 0, 0, 0.08);
+    --liquid-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    --liquid-shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.12);
+}
+
+/* Ocean theme liquid glass adjustments */
+[data-theme="ocean"] {
+    --liquid-bg: rgba(30, 41, 59, 0.85);
+    --liquid-bg-hover: rgba(30, 41, 59, 0.95);
+    --liquid-border: rgba(56, 189, 248, 0.15);
+    --liquid-shadow: 0 8px 32px rgba(8, 145, 178, 0.2);
+    --liquid-shadow-lg: 0 12px 48px rgba(8, 145, 178, 0.3);
+}
+
+/* Forest theme liquid glass adjustments */
+[data-theme="forest"] {
+    --liquid-bg: rgba(31, 41, 55, 0.85);
+    --liquid-bg-hover: rgba(31, 41, 55, 0.95);
+    --liquid-border: rgba(16, 185, 129, 0.15);
+    --liquid-shadow: 0 8px 32px rgba(5, 150, 105, 0.2);
+    --liquid-shadow-lg: 0 12px 48px rgba(5, 150, 105, 0.3);
+}
+
+/********************************************************
+  LIQUID GLASS FOR POPUPS ONLY
+*********************************************************/
+
+/* Apply liquid glass to all popup content */
+.popup-content {
+    background: var(--liquid-bg) !important;
+    backdrop-filter: var(--liquid-blur-lg);
+    -webkit-backdrop-filter: var(--liquid-blur-lg);
+    border: 1px solid var(--liquid-border);
+    box-shadow: var(--liquid-shadow-lg);
+    animation: popupLiquidEntrance 0.4s ease-out;
+}
+
+/* Liquid entrance for popups */
+@keyframes popupLiquidEntrance {
+    0% {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/********************************************************
+  LIQUID GLASS FOR DROPDOWNS ONLY
+*********************************************************/
+
+/* User menu dropdown */
+.user-menu {
+    background: var(--liquid-bg) !important;
+    backdrop-filter: var(--liquid-blur);
+    -webkit-backdrop-filter: var(--liquid-blur);
+    border: 1px solid var(--liquid-border);
+    box-shadow: var(--liquid-shadow);
+}
+
+/* Settings dropdown */
+.settings-dropdown {
+    background: var(--liquid-bg) !important;
+    backdrop-filter: var(--liquid-blur);
+    -webkit-backdrop-filter: var(--liquid-blur);
+    border: 1px solid var(--liquid-border);
+    box-shadow: var(--liquid-shadow);
+}
+
+/* Theme dropdown */
+.theme-dropdown {
+    background: var(--liquid-bg) !important;
+    backdrop-filter: var(--liquid-blur);
+    -webkit-backdrop-filter: var(--liquid-blur);
+    border: 1px solid var(--liquid-border);
+    box-shadow: var(--liquid-shadow);
+}
+
+/* Community action menu */
+#communityActionMenu {
+    background: var(--liquid-bg) !important;
+    backdrop-filter: var(--liquid-blur);
+    -webkit-backdrop-filter: var(--liquid-blur);
+    border: 1px solid var(--liquid-border);
+    box-shadow: var(--liquid-shadow);
+}
+
+/* Search results dropdown */
+.search-results {
+    background: var(--liquid-bg) !important;
+    backdrop-filter: var(--liquid-blur);
+    -webkit-backdrop-filter: var(--liquid-blur);
+    border-top: 1px solid var(--liquid-border);
+}
+
+/* User search results in access management */
+.user-search-results {
+    background: var(--liquid-bg) !important;
+    backdrop-filter: var(--liquid-blur);
+    -webkit-backdrop-filter: var(--liquid-blur);
+    border: 1px solid var(--liquid-border);
+    box-shadow: var(--liquid-shadow);
+}
+
+/********************************************************
+  SUBTLE ANIMATIONS FOR DROPDOWNS
+*********************************************************/
+
+/* Smooth transitions for dropdowns */
+.user-menu,
+.settings-dropdown,
+.theme-dropdown,
+#communityActionMenu {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Remove shimmer effects - causing gradient issues */
+
+/********************************************************
+  LIGHT THEME SPECIFIC ADJUSTMENTS
+*********************************************************/
+
+[data-theme="light"] .popup-content {
+    background: rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .user-menu,
+[data-theme="light"] .settings-dropdown,
+[data-theme="light"] .theme-dropdown,
+[data-theme="light"] #communityActionMenu {
+    background: rgba(255, 255, 255, 0.95) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Ensure consistent hover color for ALL settings dropdown items across ALL themes */
+.settings-dropdown .settings-option:hover:not(.submenu-header),
+.settings-dropdown .theme-option:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: var(--color-text) !important;
+}
+
+/* Light theme specific - use a darker hover color */
+[data-theme="light"] .settings-dropdown .settings-option:hover:not(.submenu-header),
+[data-theme="light"] .settings-dropdown .theme-option:hover {
+    background: rgba(0, 0, 0, 0.08) !important;
+    color: var(--color-text) !important;
+}
+
+/* Removed shimmer effects that were causing gradient issues */
