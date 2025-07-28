@@ -12,15 +12,15 @@ const ThemeManager = {
         this.currentTheme = localStorage.getItem('resilive-theme') || 'dark';
         this.applyTheme(this.currentTheme);
         
-        // Setup theme dropdown
-        const themeButton = document.getElementById('themeButton');
-        const themeDropdown = document.getElementById('themeDropdown');
+        // Setup settings dropdown
+        const settingsButton = document.getElementById('settingsButton');
+        const settingsDropdown = document.getElementById('settingsDropdown');
         
-        if (themeButton && themeDropdown) {
+        if (settingsButton && settingsDropdown) {
             // Toggle dropdown
-            themeButton.addEventListener('click', (e) => {
+            settingsButton.addEventListener('click', (e) => {
                 e.stopPropagation();
-                themeDropdown.classList.toggle('hidden');
+                settingsDropdown.classList.toggle('hidden');
             });
             
             // Theme option clicks
@@ -28,13 +28,23 @@ const ThemeManager = {
                 option.addEventListener('click', (e) => {
                     const theme = e.currentTarget.getAttribute('data-theme');
                     this.applyTheme(theme);
-                    themeDropdown.classList.add('hidden');
                 });
+            });
+            
+            // Settings menu options
+            document.getElementById('settingsUsersBtn').addEventListener('click', () => {
+                settingsDropdown.classList.add('hidden');
+                document.getElementById('showUsersBtn').click();
+            });
+            
+            document.getElementById('settingsLogsBtn').addEventListener('click', () => {
+                settingsDropdown.classList.add('hidden');
+                document.getElementById('showLogsBtn').click();
             });
             
             // Close dropdown when clicking outside
             document.addEventListener('click', () => {
-                themeDropdown.classList.add('hidden');
+                settingsDropdown.classList.add('hidden');
             });
         }
     },

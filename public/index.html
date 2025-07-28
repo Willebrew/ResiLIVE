@@ -44,45 +44,54 @@
     </div>
 
     <div class="topbar-right">
-        <!-- "Edit Users" and "Show Logs" -->
-        <button id="showUsersBtn" class="topnav-btn">
-            <svg class="nav-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
-            </svg>
-            <span class="log-btn-text">Users</span>
-        </button>
-        <button id="showLogsBtn" class="topnav-btn">
-            <svg class="nav-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 10-2 0 1 1 0 002 0zm0 4a1 1 0 10-2 0 1 1 0 002 0zm6-5a1 1 0 01-1 1H9a1 1 0 110-2h4a1 1 0 011 1zm-1 5a1 1 0 100-2H9a1 1 0 100 2h4z" clip-rule="evenodd"/>
-            </svg>
-            <span class="log-btn-text">Logs</span>
-        </button>
-
-        <!-- Theme Selector Dropdown -->
-        <div class="theme-selector-wrapper">
-            <button id="themeButton" class="topnav-btn">
+        <!-- Settings Menu -->
+        <div class="settings-menu-wrapper">
+            <button id="settingsButton" class="topnav-btn">
                 <svg class="nav-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v11a3 3 0 106 0V4a2 2 0 00-2-2H4zm1 14a1 1 0 100-2 1 1 0 000 2zm5-1.757l4.9-4.9a2 2 0 000-2.828L13.485 5.1a2 2 0 00-2.828 0L10 5.757v8.486zM16 18H9.071l6-6H16a2 2 0 012 2v2a2 2 0 01-2 2z" clip-rule="evenodd"/>
+                    <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
                 </svg>
-                <span class="theme-text">Theme</span>
+                <span class="settings-text">Settings</span>
             </button>
-            <div id="themeDropdown" class="theme-dropdown hidden">
-                <button class="theme-option" data-theme="dark">
-                    <span class="theme-preview dark"></span>
-                    <span>Dark</span>
+            <div id="settingsDropdown" class="settings-dropdown hidden">
+                <button class="settings-option" id="settingsUsersBtn">
+                    <svg class="settings-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>User Management</span>
                 </button>
-                <button class="theme-option" data-theme="light">
-                    <span class="theme-preview light"></span>
-                    <span>Light</span>
+                <button class="settings-option" id="settingsLogsBtn">
+                    <svg class="settings-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 10-2 0 1 1 0 002 0zm0 4a1 1 0 10-2 0 1 1 0 002 0zm6-5a1 1 0 01-1 1H9a1 1 0 110-2h4a1 1 0 011 1zm-1 5a1 1 0 100-2H9a1 1 0 100 2h4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Access Logs</span>
                 </button>
-                <button class="theme-option" data-theme="ocean">
-                    <span class="theme-preview ocean"></span>
-                    <span>Ocean</span>
-                </button>
-                <button class="theme-option" data-theme="forest">
-                    <span class="theme-preview forest"></span>
-                    <span>Forest</span>
-                </button>
+                <div class="settings-divider"></div>
+                <div class="settings-submenu">
+                    <div class="settings-option submenu-header">
+                        <svg class="settings-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v11a3 3 0 106 0V4a2 2 0 00-2-2H4zm1 14a1 1 0 100-2 1 1 0 000 2zm5-1.757l4.9-4.9a2 2 0 000-2.828L13.485 5.1a2 2 0 00-2.828 0L10 5.757v8.486zM16 18H9.071l6-6H16a2 2 0 012 2v2a2 2 0 01-2 2z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>Theme</span>
+                    </div>
+                    <div class="theme-options">
+                        <button class="theme-option" data-theme="dark">
+                            <span class="theme-preview dark"></span>
+                            <span>Dark</span>
+                        </button>
+                        <button class="theme-option" data-theme="light">
+                            <span class="theme-preview light"></span>
+                            <span>Light</span>
+                        </button>
+                        <button class="theme-option" data-theme="ocean">
+                            <span class="theme-preview ocean"></span>
+                            <span>Ocean</span>
+                        </button>
+                        <button class="theme-option" data-theme="forest">
+                            <span class="theme-preview forest"></span>
+                            <span>Forest</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -151,6 +160,9 @@
     </main>
 </div>
 
+<!-- Hidden buttons for settings menu to trigger -->
+<button id="showUsersBtn" class="hidden"></button>
+<button id="showLogsBtn" class="hidden"></button>
 
 <!-- Log Popup -->
 <div id="logPopup" class="popup">

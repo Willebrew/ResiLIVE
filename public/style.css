@@ -147,7 +147,8 @@ h1, h2, h3, h4, p {
     }
     .topnav-btn .search-btn-text,
     .topnav-btn .log-btn-text,
-    .topnav-btn .theme-text {
+    .topnav-btn .theme-text,
+    .topnav-btn .settings-text {
         display: none;
     }
 }
