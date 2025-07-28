@@ -1,0 +1,82 @@
+/********************************************************
+  SUBTLE ANIMATIONS & ENHANCEMENTS
+  Minimal, performance-focused animations
+*********************************************************/
+
+/* Subtle hover effects for interactive elements */
+button {
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+/* Removed universal button:active animation to prevent unwanted click effects */
+/* button:active:not(:disabled) {
+    transform: scale(0.98);
+} */
+
+/* Smooth transitions for dropdowns */
+.user-menu,
+.settings-dropdown,
+#communityActionMenu {
+    transition: opacity 0.2s ease;
+}
+
+/* Simple fade for modals */
+.popup {
+    transition: opacity 0.2s ease;
+}
+
+.popup-content {
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* Subtle list item hover */
+#communityList li,
+#addressList li {
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+/* Form input focus */
+input:focus,
+select:focus,
+textarea:focus {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Smooth color transitions for theme switching */
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Disable transitions during theme change to prevent flash */
+html.theme-transitioning * {
+    transition: none !important;
+}
+
+/* Simple loading state */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Subtle focus ring */
+:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* Smooth expand/collapse for address details */
+.address-details {
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+/* Remove all heavy animations on reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
