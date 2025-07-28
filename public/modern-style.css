@@ -702,3 +702,74 @@
     0%, 100% { background-color: transparent; }
     50% { background-color: rgba(99, 102, 241, 0.2); }
 }
+
+/********************************************************
+  LIGHT THEME OVERRIDES
+*********************************************************/
+[data-theme="light"] .topnav-btn {
+    background-color: #ffffff;
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+}
+
+[data-theme="light"] .topnav-btn:hover {
+    background-color: var(--color-surface-hover);
+    border-color: var(--color-border-light);
+}
+
+[data-theme="light"] .add-btn,
+[data-theme="light"] .add-btn2 {
+    background-color: var(--color-success);
+    color: white;
+}
+
+[data-theme="light"] .add-btn:hover,
+[data-theme="light"] .add-btn2:hover {
+    background-color: var(--color-success-hover);
+}
+
+[data-theme="light"] #communityList li.active,
+[data-theme="light"] #addressList li:hover {
+    background-color: var(--color-primary);
+    color: white;
+}
+
+[data-theme="light"] .user-id-list li,
+[data-theme="light"] .code-list li {
+    background-color: var(--color-surface);
+    border-color: var(--color-border);
+}
+
+[data-theme="light"] .stats-card {
+    background: white;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border);
+}
+
+[data-theme="light"] .popup-content {
+    background: white;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .popup-header,
+[data-theme="light"] .popup-footer {
+    background: var(--color-bg);
+}
+
+[data-theme="light"] #logContent {
+    background: var(--color-bg);
+}
+
+[data-theme="light"] .log-entry:hover {
+    background: var(--color-surface-hover);
+}
+
+[data-theme="light"] .user-menu {
+    background: white;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .theme-dropdown {
+    background: white;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
