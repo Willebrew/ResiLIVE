@@ -354,7 +354,7 @@ const SearchComponent = {
     selectCommunity(communityId) {
         const community = communities.find(c => c.id === communityId);
         if (community) {
-            selectCommunity(community);
+            window.selectCommunity(communityId);
             this.searchResults.classList.add('hidden');
             this.searchInput.value = '';
         }
@@ -363,10 +363,10 @@ const SearchComponent = {
     selectAddress(communityId, addressId) {
         const community = communities.find(c => c.id === communityId);
         if (community) {
-            selectCommunity(community);
+            window.selectCommunity(communityId);
             // Expand the address
             setTimeout(() => {
-                const addressElement = document.querySelector(`[data-address-id="${addressId}"]`);
+                const addressElement = document.querySelector(`[data-address-id="${addressId}"] .address-text`);
                 if (addressElement) {
                     addressElement.click();
                 }
