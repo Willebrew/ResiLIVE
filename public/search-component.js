@@ -94,7 +94,7 @@ const SearchComponent = {
             clearTimeout(this.searchTimeout);
             this.searchTimeout = setTimeout(() => {
                 this.performSearch(e.target.value);
-            }, 300);
+            }, 500);
         });
         
         // Filter toggle
@@ -374,6 +374,22 @@ const SearchComponent = {
         if (community) {
             window.selectCommunity(communityId);
             this.closeSearch();
+            // Highlight the community after navigation
+            setTimeout(() => {
+                // Make all address items immediately visible
+                document.querySelectorAll('.address-item.animate-in').forEach(item => {
+                    item.classList.remove('animate-in');
+                    item.style.opacity = '1';
+                    item.style.transform = 'none';
+                });
+                
+                const communityElement = document.querySelector('.community-info');
+                if (communityElement) {
+                    communityElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    communityElement.classList.add('highlight-flash');
+                    setTimeout(() => communityElement.classList.remove('highlight-flash'), 2000);
+                }
+            }, 500);
         }
     },
     
@@ -381,13 +397,31 @@ const SearchComponent = {
         const community = communities.find(c => c.id === communityId);
         if (community) {
             window.selectCommunity(communityId);
-            // Expand the address
+            // Expand and highlight the address
             setTimeout(() => {
-                const addressElement = document.querySelector(`[data-address-id="${addressId}"] .address-text`);
+                // Make all address items immediately visible
+                document.querySelectorAll('.address-item.animate-in').forEach(item => {
+                    item.classList.remove('animate-in');
+                    item.style.opacity = '1';
+                    item.style.transform = 'none';
+                });
+                
+                const addressElement = document.querySelector(`.address-item[data-address-id="${addressId}"] .address-text`);
+                const addressContainer = document.querySelector(`.address-item[data-address-id="${addressId}"]`);
                 if (addressElement) {
                     addressElement.click();
+                    if (addressContainer) {
+                        // Remove animate-in class to make it immediately visible
+                        addressContainer.classList.remove('animate-in');
+                        addressContainer.style.opacity = '1';
+                        addressContainer.style.transform = 'none';
+                        
+                        addressContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        addressContainer.classList.add('highlight-flash');
+                        setTimeout(() => addressContainer.classList.remove('highlight-flash'), 2000);
+                    }
                 }
-            }, 300);
+            }, 500);
         }
         this.closeSearch();
     },
@@ -396,20 +430,31 @@ const SearchComponent = {
         this.selectAddress(communityId, addressId);
         // Highlight resident after address expands
         setTimeout(() => {
-            const personElement = document.querySelector(`[data-person-id="${personId}"]`);
+            const personElement = document.querySelector(`.user-id-list li[data-person-id="${personId}"]`);
+            
             if (personElement) {
                 personElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 personElement.classList.add('highlight-flash');
                 setTimeout(() => personElement.classList.remove('highlight-flash'), 2000);
+            } else {
+                // Try once more after a delay
+                setTimeout(() => {
+                    const retryElement = document.querySelector(`.user-id-list li[data-person-id="${personId}"]`);
+                    if (retryElement) {
+                        retryElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        retryElement.classList.add('highlight-flash');
+                        setTimeout(() => retryElement.classList.remove('highlight-flash'), 2000);
+                    }
+                }, 500);
             }
-        }, 600);
+        }, 1000);
     },
     
     selectCode(communityId, addressId, personId, codeId) {
         this.selectResident(communityId, addressId, personId);
         // Highlight code after navigation
         setTimeout(() => {
-            const codeElement = document.querySelector(`[data-code-id="${codeId}"]`);
+            const codeElement = document.querySelector(`.code-list li[data-code-id="${codeId}"]`);
             if (codeElement) {
                 codeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 codeElement.classList.add('highlight-flash');

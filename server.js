@@ -540,7 +540,8 @@ app.post('/api/login', async (req, res) => {
             message: 'Logged in successfully',
             user: {
                 username: userData.username,
-                role: userData.role
+                role: userData.role,
+                theme: userData.theme || 'dark'
             }
         });
     } catch (error) {
@@ -658,14 +659,32 @@ app.get('/api/communities', requireAuth, async (req, res) => {
 });
 
 // Route to check if the user is authenticated
-app.get('/api/check-auth', (req, res) => {
+app.get('/api/check-auth', async (req, res) => {
     if (req.session.userId) {
-        res.json({
-            authenticated: true,
-            userId: req.session.userId,
-            username: req.session.username,
-            role: req.session.userRole
-        });
+        try {
+            // Fetch user's theme preference
+            const userRef = db.collection('users').doc(req.session.userId);
+            const userDoc = await userRef.get();
+            const userData = userDoc.exists ? userDoc.data() : {};
+            
+            res.json({
+                authenticated: true,
+                userId: req.session.userId,
+                username: req.session.username,
+                role: req.session.userRole,
+                theme: userData.theme || 'dark' // Include theme with default
+            });
+        } catch (error) {
+            console.error('Error in check-auth:', error);
+            // Still return auth info even if theme fetch fails
+            res.json({
+                authenticated: true,
+                userId: req.session.userId,
+                username: req.session.username,
+                role: req.session.userRole,
+                theme: 'dark' // Default theme on error
+            });
+        }
     } else {
         res.status(401).json({ authenticated: false });
     }
@@ -1366,6 +1385,45 @@ async function removeExpiredCodes() {
 
 // Set interval to remove expired codes every 60 seconds
 setInterval(removeExpiredCodes, 60000);
+
+// Route to get user theme preference
+app.get('/api/user/theme', requireAuth, async (req, res) => {
+    try {
+        const userRef = db.collection('users').doc(req.session.userId);
+        const userDoc = await userRef.get();
+        
+        if (!userDoc.exists) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        const userData = userDoc.data();
+        res.json({ theme: userData.theme || 'dark' }); // Default to dark theme
+    } catch (error) {
+        console.error('Error fetching user theme:', error);
+        res.status(500).json({ error: 'Error fetching theme preference' });
+    }
+});
+
+// Route to update user theme preference
+app.put('/api/user/theme', requireAuth, async (req, res) => {
+    try {
+        const { theme } = req.body;
+        
+        // Validate theme
+        const validThemes = ['dark', 'light', 'ocean', 'forest'];
+        if (!validThemes.includes(theme)) {
+            return res.status(400).json({ error: 'Invalid theme' });
+        }
+        
+        const userRef = db.collection('users').doc(req.session.userId);
+        await userRef.update({ theme });
+        
+        res.json({ message: 'Theme updated successfully', theme });
+    } catch (error) {
+        console.error('Error updating user theme:', error);
+        res.status(500).json({ error: 'Error updating theme preference' });
+    }
+});
 
 // Route to serve the main API data file
 app.get('/api', limiter, requireApiKey, async (req, res) => {
