@@ -142,6 +142,11 @@ h1, h2, h3, h4, p {
         padding: 6px 10px;
         font-size: 0.8em;
     }
+    .topnav-btn .search-btn-text,
+    .topnav-btn .log-btn-text,
+    .topnav-btn .theme-text {
+        display: none;
+    }
 }
 
 /********************************************************
@@ -433,13 +438,13 @@ main {
     box-sizing: border-box;
 }
 
-/* Direct parent div of h2#communityName, button#communityMenuBtn, and span#externalOpenGateBtnContainer */
-main > div:first-child {
+/* Community header with name and menu button */
+#communityDetails > div:first-child {
     display: flex;
     align-items: center;
-    /* If this div has other children that should not be flex items,
-       a more specific selector or a dedicated class/ID for the wrapper div would be better.
-       Assuming for now this div *only* wraps these three elements or this styling is acceptable for all its children. */
+    gap: 10px;
+    margin-bottom: 20px;
+    position: relative;
 }
 
 #communityName {
@@ -470,16 +475,20 @@ main > div:first-child {
 
 /* Styles for the community action menu dropdown */
 #communityActionMenu {
-    position: absolute; /* Initial position, might be refined by JS if .community-action-menu-positioned is used */
-    /* z-index: 100; Will be handled by .community-action-menu-positioned */
-    background-color: var(--color-card);
-    border: 1px solid var(--color-border);
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 8px;
+    background: var(--glass-bg, rgba(20, 20, 20, 0.95));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
     border-radius: var(--radius);
     padding: 10px;
-    min-width: 200px; /* Ensure enough width for options */
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5); /* More pronounced shadow */
-    /* display: none; /* This line is removed, .hidden class in HTML will hide it */
-
+    min-width: 200px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    z-index: 100;
+    
     /* Animation properties - start "hidden" */
     opacity: 0;
     pointer-events: none;

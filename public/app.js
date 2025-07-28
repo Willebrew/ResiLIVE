@@ -920,7 +920,17 @@ function selectCommunity(communityId) {
     renderAddresses();
 
     const communityNameElement = document.getElementById('communityName');
-    communityNameElement.textContent = selectedCommunity.name;
+    const dashboard = document.getElementById('dashboard');
+    const communityDetails = document.getElementById('communityDetails');
+    
+    if (selectedCommunity) {
+        communityNameElement.textContent = selectedCommunity.name;
+        if (dashboard) dashboard.classList.add('hidden');
+        if (communityDetails) communityDetails.classList.remove('hidden');
+    } else {
+        if (dashboard) dashboard.classList.remove('hidden');
+        if (communityDetails) communityDetails.classList.add('hidden');
+    }
 
     // Initialize remoteGateControlEnabled if it's not defined
     if (typeof selectedCommunity.remoteGateControlEnabled === 'undefined') {
