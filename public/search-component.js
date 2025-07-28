@@ -130,6 +130,33 @@ const SearchComponent = {
                 this.closeSearch();
             }
         });
+        
+        // Event delegation for search result clicks
+        this.searchResults.addEventListener('click', (e) => {
+            const resultItem = e.target.closest('.search-result-item');
+            if (!resultItem) return;
+            
+            const action = resultItem.dataset.action;
+            const communityId = resultItem.dataset.communityId;
+            const addressId = resultItem.dataset.addressId;
+            const personId = resultItem.dataset.personId;
+            const codeId = resultItem.dataset.codeId;
+            
+            switch(action) {
+                case 'community':
+                    SearchComponent.selectCommunity(communityId);
+                    break;
+                case 'address':
+                    SearchComponent.selectAddress(communityId, addressId);
+                    break;
+                case 'resident':
+                    SearchComponent.selectResident(communityId, addressId, personId);
+                    break;
+                case 'code':
+                    SearchComponent.selectCode(communityId, addressId, personId, codeId);
+                    break;
+            }
+        });
     },
     
     async performSearch(query) {
@@ -267,7 +294,7 @@ const SearchComponent = {
             html += '<div class="search-section"><h4>Communities</h4>';
             results.communities.forEach(item => {
                 html += `
-                    <div class="search-result-item hover-lift" onclick="SearchComponent.selectCommunity('${item.id}')">
+                    <div class="search-result-item hover-lift" data-action="community" data-community-id="${item.id}">
                         <svg class="result-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
                         </svg>
@@ -286,7 +313,7 @@ const SearchComponent = {
             html += '<div class="search-section"><h4>Addresses</h4>';
             results.addresses.forEach(item => {
                 html += `
-                    <div class="search-result-item hover-lift" onclick="SearchComponent.selectAddress('${item.communityId}', '${item.addressId}')">
+                    <div class="search-result-item hover-lift" data-action="address" data-community-id="${item.communityId}" data-address-id="${item.addressId}">
                         <svg class="result-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
                         </svg>
@@ -305,7 +332,7 @@ const SearchComponent = {
             html += '<div class="search-section"><h4>Residents</h4>';
             results.residents.forEach(item => {
                 html += `
-                    <div class="search-result-item hover-lift" onclick="SearchComponent.selectResident('${item.communityId}', '${item.addressId}', '${item.personId}')">
+                    <div class="search-result-item hover-lift" data-action="resident" data-community-id="${item.communityId}" data-address-id="${item.addressId}" data-person-id="${item.personId}">
                         <svg class="result-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
                         </svg>
@@ -325,7 +352,7 @@ const SearchComponent = {
             results.codes.forEach(item => {
                 html += `
                     <div class="search-result-item hover-lift ${item.expired ? 'expired' : ''}" 
-                         onclick="SearchComponent.selectCode('${item.communityId}', '${item.addressId}', '${item.personId}', '${item.codeId}')">
+                         data-action="code" data-community-id="${item.communityId}" data-address-id="${item.addressId}" data-person-id="${item.personId}" data-code-id="${item.codeId}">
                         <svg class="result-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd"/>
                         </svg>

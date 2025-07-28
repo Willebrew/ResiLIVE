@@ -1080,6 +1080,14 @@ main.transitioning {
     border-width: 4px;
 }
 
+.loading-spinner-inline {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+    margin-right: 8px;
+    display: inline-block;
+}
+
 .loading-text {
     margin-top: 16px;
     color: var(--color-text);
