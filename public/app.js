@@ -2181,7 +2181,7 @@ function debounce(func, wait) {
 /**
  * Opens the access management popup
  */
-function openAccessManagementPopup() {
+async function openAccessManagementPopup() {
     if (!selectedCommunity) {
         alert('Please select a community first');
         return;
@@ -2192,6 +2192,11 @@ function openAccessManagementPopup() {
     
     if (communityName) {
         communityName.textContent = selectedCommunity.name;
+    }
+    
+    // Fetch users if not already loaded
+    if (!users || users.length === 0) {
+        await fetchUsers();
     }
     
     renderCurrentAccessList();
@@ -2360,11 +2365,12 @@ function searchUsers() {
     // Ensure selectedCommunity exists and has allowedUsers
     const allowedUsers = selectedCommunity && selectedCommunity.allowedUsers ? selectedCommunity.allowedUsers : [];
     
-    // Filter users that don't already have access and match the search
+    // Filter users that don't already have access, match the search, and are not admin/superuser
     const filteredUsers = users.filter(user => {
         const hasAccess = allowedUsers.includes(user.username);
         const matchesSearch = user.username.toLowerCase().includes(query);
-        return !hasAccess && matchesSearch;
+        const isAdminOrSuperuser = user.role === 'admin' || user.role === 'superuser';
+        return !hasAccess && matchesSearch && !isAdminOrSuperuser;
     });
     
     console.log(`Search query: "${query}", Found ${filteredUsers.length} users`);
