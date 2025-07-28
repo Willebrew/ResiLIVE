@@ -21,6 +21,11 @@ const ThemeManager = {
             settingsButton.addEventListener('click', (e) => {
                 e.stopPropagation();
                 settingsDropdown.classList.toggle('hidden');
+                // Close user menu when opening settings
+                const userMenu = document.getElementById('userMenu');
+                if (userMenu) {
+                    userMenu.classList.remove('show');
+                }
             });
             
             // Theme option clicks
@@ -114,8 +119,8 @@ const LoadingManager = {
 // Micro Interactions
 const MicroInteractions = {
     init() {
-        // Add ripple effect to buttons
-        this.setupRippleEffect();
+        // Add ripple effect to buttons - DISABLED to remove click animations
+        // this.setupRippleEffect();
         
         // Add hover sounds (optional - requires audio files)
         this.setupHoverEffects();
@@ -128,6 +133,14 @@ const MicroInteractions = {
         document.addEventListener('click', (e) => {
             const button = e.target.closest('button');
             if (!button) return;
+            
+            // Skip ripple effect for hamburger menu and search button
+            if (button.classList.contains('hamburger') || 
+                button.id === 'searchToggleBtn' ||
+                button.closest('.hamburger') ||
+                button.closest('#searchToggleBtn')) {
+                return;
+            }
             
             const ripple = document.createElement('span');
             ripple.className = 'ripple';
@@ -211,25 +224,25 @@ const MicroInteractions = {
     }
 };
 
-// Add ripple effect CSS
-const rippleStyle = document.createElement('style');
-rippleStyle.textContent = `
-    .ripple {
-        position: absolute;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.5);
-        transform: scale(0);
-        animation: ripple-animation 0.6s ease-out;
-    }
-    
-    @keyframes ripple-animation {
-        to {
-            transform: scale(4);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(rippleStyle);
+// Add ripple effect CSS - DISABLED to remove click animations
+// const rippleStyle = document.createElement('style');
+// rippleStyle.textContent = `
+//     .ripple {
+//         position: absolute;
+//         border-radius: 50%;
+//         background: rgba(255, 255, 255, 0.5);
+//         transform: scale(0);
+//         animation: ripple-animation 0.6s ease-out;
+//     }
+//     
+//     @keyframes ripple-animation {
+//         to {
+//             transform: scale(4);
+//             opacity: 0;
+//         }
+//     }
+// `;
+// document.head.appendChild(rippleStyle);
 
 // Initialize all modern features when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {

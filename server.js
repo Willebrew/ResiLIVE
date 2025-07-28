@@ -197,9 +197,6 @@ app.put('/api/communities/:communityId/name', requireAuth, requireAdmin, async (
         if (!name || typeof name !== 'string' || name.trim() === '') {
             return res.status(400).json({ error: 'New name is required and must be a non-empty string.' });
         }
-        if (/\s/.test(name)) { // Checks for any whitespace characters
-            return res.status(400).json({ error: 'Community name cannot contain spaces.' });
-        }
 
         // Check for duplicate name (excluding the current community if its name isn't changing)
         const communitiesRef = db.collection('communities');
@@ -458,7 +455,7 @@ app.post('/api/register', requireAuth, requireAdmin, async (req, res) => {
         const usersRef = db.collection('users');
 
         const existingUser = await usersRef
-            .where('username', '==', username.toLowerCase())
+            .where('username', '==', username)
             .get();
 
         if (!existingUser.empty) {
@@ -520,7 +517,7 @@ app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
         const usersRef = db.collection('users');
-        const snapshot = await usersRef.where('username', '==', username.toLowerCase()).get();
+        const snapshot = await usersRef.where('username', '==', username).get();
 
         if (snapshot.empty) {
             return res.status(401).json({ error: 'Invalid credentials' });
@@ -695,7 +692,7 @@ app.post('/api/users', requireAuth, requireAdmin, async (req, res) => {
         const { username, password } = req.body;
 
         const existingUser = await db.collection('users')
-            .where('username', '==', username.toLowerCase())
+            .where('username', '==', username)
             .get();
 
         if (!existingUser.empty) {
@@ -704,7 +701,7 @@ app.post('/api/users', requireAuth, requireAdmin, async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = {
-            username: username.toLowerCase(),
+            username: username,
             password: hashedPassword,
             role: 'user',
             createdAt: admin.firestore.FieldValue.serverTimestamp()
@@ -849,15 +846,12 @@ app.put('/api/communities/:id/allowed-users', requireAuth, requireAdmin, async (
         const validUsers = [];
         const invalidUsers = [];
 
-        // Convert allowedUsers to lowercase for comparison
-        const normalizedAllowedUsers = allowedUsers.map(username => username.toLowerCase());
-
         // Validate each user
-        for (const username of normalizedAllowedUsers) {
-            // Find user case-insensitively but keep original case in database
-            const user = users.find(u => u.username.toLowerCase() === username);
+        for (const username of allowedUsers) {
+            // Find user with exact case match
+            const user = users.find(u => u.username === username);
             if (user && user.role !== 'admin' && user.role !== 'superuser') {
-                // Add the original username case from the database
+                // Add the username
                 if (!validUsers.includes(user.username)) {
                     validUsers.push(user.username);
                 }

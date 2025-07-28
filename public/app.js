@@ -105,8 +105,19 @@ function updateCommunityMenuView() {
     if (communityMenuBtn) communityMenuBtn.classList.remove('hidden');
 
     const remoteGateControlToggle = document.getElementById('remoteGateControlToggle');
+    const remoteControlBtn = document.getElementById('remoteControlBtn');
+    
     if (remoteGateControlToggle) {
         remoteGateControlToggle.checked = !!selectedCommunity.remoteGateControlEnabled;
+    }
+    
+    // Update the button's active state
+    if (remoteControlBtn) {
+        if (selectedCommunity.remoteGateControlEnabled) {
+            remoteControlBtn.classList.add('active');
+        } else {
+            remoteControlBtn.classList.remove('active');
+        }
     }
 
     // if (communityOpenGateMenuBtnContainer) {
@@ -192,19 +203,38 @@ async function checkLoginStatus() {
 function setupUIEventListeners() {
     // Hamburger button for sidebar toggle on mobile
     const hamburgerBtn = document.getElementById('hamburgerBtn');
-    if (hamburgerBtn) {
-        hamburgerBtn.addEventListener('click', () => {
-            document.querySelector('.sidebar').classList.toggle('sidebar-open');
+    const sidebar = document.querySelector('.sidebar');
+    
+    if (hamburgerBtn && sidebar) {
+        hamburgerBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sidebar.classList.toggle('sidebar-open');
+        });
+        
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', (e) => {
+            // Only handle clicks outside sidebar on mobile
+            if (window.innerWidth <= 900) {
+                if (!sidebar.contains(e.target) && !hamburgerBtn.contains(e.target) && sidebar.classList.contains('sidebar-open')) {
+                    sidebar.classList.remove('sidebar-open');
+                }
+            }
         });
     }
 
     // User menu toggle on user circle click
     const userCircle = document.getElementById('userCircle');
     const userMenu = document.getElementById('userMenu');
+    const settingsDropdown = document.getElementById('settingsDropdown');
+    
     if (userCircle && userMenu) {
         userCircle.addEventListener('click', (e) => {
             e.stopPropagation();
             userMenu.classList.toggle('show');
+            // Close settings dropdown when opening user menu
+            if (settingsDropdown) {
+                settingsDropdown.classList.add('hidden');
+            }
         });
         document.addEventListener('click', (evt) => {
             if (!userMenu.contains(evt.target) && evt.target !== userCircle) {
@@ -252,57 +282,98 @@ function setupUIEventListeners() {
             e.stopPropagation(); 
             const isActuallyHidden = communityActionMenu.classList.contains('hidden');
             if (isActuallyHidden) {
-                communityActionMenu.classList.remove('hidden');
-                communityActionMenu.classList.add('community-action-menu-positioned');
-                // Dynamic positioning (Keep as per instructions)
+                // Dynamic positioning
                 const btnRect = communityMenuBtn.getBoundingClientRect();
                 communityActionMenu.style.left = btnRect.left + 'px'; 
-                communityActionMenu.style.top = (btnRect.top + 2) + 'px'; // Changed to use btnRect.top
-                communityActionMenu.classList.add('show'); // Add show class to trigger animation
+                communityActionMenu.style.top = (btnRect.top + 2) + 'px';
+                // Show immediately
+                communityActionMenu.classList.remove('hidden');
+                communityActionMenu.classList.add('community-action-menu-positioned');
             } else {
-                communityActionMenu.classList.remove('show');
-                setTimeout(() => {
-                    communityActionMenu.classList.add('hidden');
-                    communityActionMenu.classList.remove('community-action-menu-positioned');
-                }, 200); // 200ms matches the CSS transition time
+                // Hide immediately
+                communityActionMenu.classList.add('hidden');
+                communityActionMenu.classList.remove('community-action-menu-positioned');
             }
         });
 
         // Hide menu when clicking outside
         document.addEventListener('click', (evt) => {
-            // Check if the menu is currently visible (not hidden and has 'show' class)
-            if (communityActionMenu.classList.contains('show') && // Check for 'show' instead of !.hidden
-                !communityActionMenu.contains(evt.target) && // Click is not inside the menu
-                evt.target !== communityMenuBtn) { // And click is not on the menu button itself
-                communityActionMenu.classList.remove('show');
-                setTimeout(() => {
-                    communityActionMenu.classList.add('hidden');
-                    communityActionMenu.classList.remove('community-action-menu-positioned');
-                }, 200);
+            // Check if the menu is currently visible (not hidden)
+            if (!communityActionMenu.classList.contains('hidden') && 
+                !communityActionMenu.contains(evt.target) && 
+                evt.target !== communityMenuBtn) {
+                // Hide immediately
+                communityActionMenu.classList.add('hidden');
+                communityActionMenu.classList.remove('community-action-menu-positioned');
             }
         });
     }
 
-    // "Rename Community" option
-    const renameCommunityOption = document.getElementById('renameCommunityOption');
-    if (renameCommunityOption && renameCommunityOption.firstElementChild) {
-        renameCommunityOption.firstElementChild.addEventListener('click', async () => {
-            if (!selectedCommunity) return;
-            const newName = prompt('Enter new community name (no spaces allowed):', selectedCommunity.name);
-            if (newName && newName.trim() !== '' && !newName.includes(' ')) {
+    // Use event delegation for community menu items
+    if (communityActionMenu) {
+        communityActionMenu.addEventListener('click', async (e) => {
+            const button = e.target.closest('button');
+            if (!button) return;
+            
+            // Handle rename community
+            if (button.closest('#renameCommunityOption')) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (!selectedCommunity) return;
+                
+                // Hide the community menu
+                communityActionMenu.classList.add('hidden');
+                communityActionMenu.classList.remove('community-action-menu-positioned');
+                
+                // Show the rename popup
+                const renameCommunityModal = document.getElementById('renameCommunityModal');
+                const renameCommunityInput = document.getElementById('renameCommunityInput');
+                
+                if (renameCommunityModal && renameCommunityInput) {
+                    renameCommunityInput.value = selectedCommunity.name;
+                    renameCommunityModal.classList.remove('hidden');
+                    renameCommunityModal.classList.add('popup-visible');
+                    renameCommunityInput.focus();
+                    renameCommunityInput.select();
+                }
+            }
+        });
+    }
+    
+    // Setup rename community popup handlers
+    const setupRenameCommunityHandlers = () => {
+        const renameCommunityModal = document.getElementById('renameCommunityModal');
+        const renameCommunityInput = document.getElementById('renameCommunityInput');
+        const confirmRenameCommunityBtn = document.getElementById('confirmRenameCommunityBtn');
+        const cancelRenameCommunityBtn = document.getElementById('cancelRenameCommunityBtn');
+        const closeRenameCommunityBtn = document.getElementById('closeRenameCommunityBtn');
+        
+        const closeModal = () => {
+            if (renameCommunityModal) {
+                renameCommunityModal.classList.add('hidden');
+                renameCommunityModal.classList.remove('popup-visible');
+            }
+        };
+        
+        const handleRename = async () => {
+            if (!selectedCommunity || !renameCommunityInput) return;
+            
+            const newName = renameCommunityInput.value.trim();
+            if (newName && newName !== '') {
                 const oldName = selectedCommunity.name;
+                
+                // Close modal
+                closeModal();
+                
                 // Optimistically update UI
-                selectedCommunity.name = newName.trim();
+                selectedCommunity.name = newName;
                 document.getElementById('communityName').textContent = selectedCommunity.name;
                 const communityInArray = communities.find(c => c.id === selectedCommunity.id);
                 if (communityInArray) {
                     communityInArray.name = selectedCommunity.name;
                 }
-                renderCommunities(); 
-                if (communityActionMenu) { // CSP Refactor
-                    communityActionMenu.classList.add('hidden');
-                    communityActionMenu.classList.remove('community-action-menu-positioned');
-                }
+                renderCommunities();
 
                 try {
                     const response = await fetch(`/api/communities/${selectedCommunity.id}/name`, {
@@ -330,13 +401,53 @@ function setupUIEventListeners() {
                     renderCommunities();
                     alert(`Error renaming community: ${error.message}`);
                 }
-            } else if (newName) { // newName is not null, so it means it was invalid
-                alert('Invalid community name. Ensure it is not empty and does not contain spaces.');
+            } else {
+                alert('Invalid community name. Ensure it is not empty.');
+            }
+        };
+        
+        // Event listeners
+        if (confirmRenameCommunityBtn) {
+            confirmRenameCommunityBtn.addEventListener('click', handleRename);
+        }
+        
+        if (cancelRenameCommunityBtn) {
+            cancelRenameCommunityBtn.addEventListener('click', closeModal);
+        }
+        
+        if (closeRenameCommunityBtn) {
+            closeRenameCommunityBtn.addEventListener('click', closeModal);
+        }
+        
+        // Enter key support
+        if (renameCommunityInput) {
+            renameCommunityInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleRename();
+                }
+            });
+        }
+    };
+    
+    // Initialize rename handlers
+    setupRenameCommunityHandlers();
+
+    // "Remote Gate Control" button
+    const remoteControlBtn = document.getElementById('remoteControlBtn');
+    if (remoteControlBtn) {
+        remoteControlBtn.addEventListener('click', async () => {
+            if (!selectedCommunity) return;
+            
+            // Toggle the state
+            const remoteGateControlToggle = document.getElementById('remoteGateControlToggle');
+            if (remoteGateControlToggle) {
+                remoteGateControlToggle.checked = !remoteGateControlToggle.checked;
+                remoteGateControlToggle.dispatchEvent(new Event('change'));
             }
         });
     }
-
-    // "Remote Gate Control" toggle
+    
+    // "Remote Gate Control" toggle (hidden checkbox)
     const remoteGateControlToggle = document.getElementById('remoteGateControlToggle');
     if (remoteGateControlToggle) {
         remoteGateControlToggle.addEventListener('change', async () => {
@@ -411,6 +522,33 @@ function setupUIEventListeners() {
         addCommunityBtn.addEventListener('click', addCommunity);
     }
 
+    // New access management button
+    const manageUsersBtn = document.getElementById('manageUsersBtn');
+    if (manageUsersBtn) {
+        manageUsersBtn.addEventListener('click', openAccessManagementPopup);
+    }
+
+    // Access management popup events
+    const closeAccessPopupBtn = document.getElementById('closeAccessPopupBtn');
+    if (closeAccessPopupBtn) {
+        closeAccessPopupBtn.addEventListener('click', closeAccessManagementPopup);
+    }
+
+    const grantAccessBtn = document.getElementById('grantAccessBtn');
+    if (grantAccessBtn) {
+        grantAccessBtn.addEventListener('click', grantSelectedUsersAccess);
+    }
+
+    const userSearchInput = document.getElementById('userSearchInput');
+    if (userSearchInput) {
+        userSearchInput.addEventListener('input', debounce(searchUsers, 300));
+        userSearchInput.addEventListener('focus', showUserSearchResults);
+        userSearchInput.addEventListener('blur', () => {
+            setTimeout(hideUserSearchResults, 200);
+        });
+    }
+
+    // Legacy support for old buttons (can be removed later)
     const updateAllowedUsersBtn = document.getElementById('updateAllowedUsersBtn');
     if (updateAllowedUsersBtn) {
         updateAllowedUsersBtn.addEventListener('click', updateAllowedUsers);
@@ -484,6 +622,77 @@ function setupUIEventListeners() {
     const cancelAddCodeBtn = document.getElementById('cancelAddCodeBtn');
     if (cancelAddCodeBtn) {
         cancelAddCodeBtn.addEventListener('click', closeAddCodeModal);
+    }
+    
+    // Event listener for close icon button in the Add Code Modal
+    const closeAddCodeBtn = document.getElementById('closeAddCodeBtn');
+    if (closeAddCodeBtn) {
+        closeAddCodeBtn.addEventListener('click', closeAddCodeModal);
+    }
+    
+    // Event listeners for Add User ID Modal
+    const cancelAddUserIdBtn = document.getElementById('cancelAddUserIdBtn');
+    if (cancelAddUserIdBtn) {
+        cancelAddUserIdBtn.addEventListener('click', closeAddUserIdModal);
+    }
+    
+    const closeAddUserIdBtn = document.getElementById('closeAddUserIdBtn');
+    if (closeAddUserIdBtn) {
+        closeAddUserIdBtn.addEventListener('click', closeAddUserIdModal);
+    }
+    
+    const saveUserIdBtn = document.getElementById('saveUserIdBtn');
+    if (saveUserIdBtn) {
+        saveUserIdBtn.addEventListener('click', saveUserIdFromModal);
+    }
+    
+    // Event listeners for Add Address Modal
+    const cancelAddAddressBtn = document.getElementById('cancelAddAddressBtn');
+    if (cancelAddAddressBtn) {
+        cancelAddAddressBtn.addEventListener('click', closeAddAddressModal);
+    }
+    
+    const closeAddAddressBtn = document.getElementById('closeAddAddressBtn');
+    if (closeAddAddressBtn) {
+        closeAddAddressBtn.addEventListener('click', closeAddAddressModal);
+    }
+    
+    const saveAddressBtn = document.getElementById('saveAddressBtn');
+    if (saveAddressBtn) {
+        saveAddressBtn.addEventListener('click', saveAddressFromModal);
+    }
+    
+    // Toggle button for relay control
+    const addressHasGateBtn = document.getElementById('addressHasGateBtn');
+    if (addressHasGateBtn) {
+        addressHasGateBtn.addEventListener('click', function() {
+            const hasGateInput = document.getElementById('addressHasGateInput');
+            const isActive = this.classList.contains('active');
+            
+            if (isActive) {
+                this.classList.remove('active');
+                hasGateInput.value = 'false';
+            } else {
+                this.classList.add('active');
+                hasGateInput.value = 'true';
+            }
+        });
+    }
+    
+    // Event listeners for Add Community Modal
+    const cancelAddCommunityBtn = document.getElementById('cancelAddCommunityBtn');
+    if (cancelAddCommunityBtn) {
+        cancelAddCommunityBtn.addEventListener('click', closeAddCommunityModal);
+    }
+    
+    const closeAddCommunityBtn = document.getElementById('closeAddCommunityBtn');
+    if (closeAddCommunityBtn) {
+        closeAddCommunityBtn.addEventListener('click', closeAddCommunityModal);
+    }
+    
+    const saveCommunityBtn = document.getElementById('saveCommunityBtn');
+    if (saveCommunityBtn) {
+        saveCommunityBtn.addEventListener('click', saveCommunityFromModal);
     }
 }
 
@@ -575,7 +784,7 @@ function renderUsers() {
 
             const removeUserButton = document.createElement('button');
             removeUserButton.className = 'remove-btn';
-            removeUserButton.textContent = '-';
+            removeUserButton.innerHTML = '<svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>';
             removeUserButton.title = 'Remove user';
             removeUserButton.addEventListener('click', () => removeUser(user.id));
             controlsDiv.appendChild(removeUserButton);
@@ -592,8 +801,15 @@ function renderUsers() {
 async function addUser() {
     const username = document.getElementById('newUsername').value;
     const password = document.getElementById('newPassword').value;
+    const addButton = document.getElementById('addUserBtn');
+    
     if (username && password) {
         try {
+            // Show loading state on button
+            if (window.AnimationUtils) {
+                AnimationUtils.setButtonLoading(addButton, true, 'Add User');
+            }
+            
             const response = await fetch('/api/users', {
                 method: 'POST',
                 headers: {
@@ -616,6 +832,11 @@ async function addUser() {
         } catch (error) {
             console.error('Error adding user:', error);
             alert('An error occurred while adding the user. Please try again.');
+        } finally {
+            // Reset button loading state
+            if (window.AnimationUtils) {
+                AnimationUtils.setButtonLoading(addButton, false, 'Add User');
+            }
         }
     } else {
         alert('Please enter both username and password.');
@@ -669,6 +890,11 @@ async function removeUser(userId) {
  */
 async function fetchData() {
     try {
+        // Show skeleton loading for community list
+        if (window.AnimationUtils) {
+            AnimationUtils.showSkeletonLoading('communityList', 3);
+        }
+        
         const response = await fetch('/api/communities');
         if (response.status === 401) {
             window.location.href = '/login.html';
@@ -856,22 +1082,73 @@ function displayLogs(logs) {
     logs.forEach(log => {
         const logEntry = document.createElement('div');
         logEntry.className = 'log-entry';
-        const timestamp = new Date(log.timestamp).toLocaleString();
+        
+        // Format timestamp more compactly
+        const date = new Date(log.timestamp);
+        const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+        const dateOptions = { month: 'short', day: 'numeric' };
+        const time = date.toLocaleTimeString('en-US', timeOptions);
+        const dateStr = date.toLocaleDateString('en-US', dateOptions);
+        const timestamp = `${dateStr} ${time}`;
         
         let actionClass = 'action-allowed'; // Default to allowed (green)
         // Ensure log.action exists and is a string before calling toLowerCase()
         if (log.action && typeof log.action === 'string' && log.action.toLowerCase().includes("denied")) {
             actionClass = 'action-denied'; // Set to denied (red) if applicable
+            logEntry.classList.add('action-denied'); // Add class to entry for bar color
         }
 
         // Ensure log.action is a string for safe display in innerHTML; display number as is.
-        const actionText = (typeof log.action === 'string' || typeof log.action === 'number') ? log.action : '(empty action)';
+        const actionText = (typeof log.action === 'string' || typeof log.action === 'number') ? String(log.action) : '(empty action)';
+        
+        // Escape HTML to prevent XSS and preserve text
+        const escapeHtml = (text) => {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        };
+        
+        // Check if action text is long (more than 60 characters - reduced for better UX)
+        const isLongEntry = actionText.length > 60;
+        // Only add expander on desktop (screens wider than 768px)
+        const isMobile = window.innerWidth <= 768;
+        const needsExpander = isLongEntry && !isMobile;
 
-        logEntry.innerHTML = `
-            <span class="timestamp">${timestamp}</span><br>
-            <span class="player">${log.player}</span>: 
-            <span class="action ${actionClass}">${actionText}</span>
-        `;
+        // Add expandable class if needed
+        if (needsExpander) {
+            logEntry.classList.add('expandable');
+        }
+
+        // Create elements instead of using innerHTML for better control
+        const timestampSpan = document.createElement('span');
+        timestampSpan.className = 'timestamp';
+        timestampSpan.textContent = timestamp;
+        
+        const playerSpan = document.createElement('span');
+        playerSpan.className = 'player';
+        playerSpan.textContent = log.player;
+        
+        const actionSpan = document.createElement('span');
+        actionSpan.className = `action ${actionClass} ${isLongEntry ? 'truncated' : ''}`;
+        actionSpan.textContent = actionText;
+        
+        logEntry.appendChild(timestampSpan);
+        logEntry.appendChild(playerSpan);
+        logEntry.appendChild(actionSpan);
+        
+        // Add expand indicator if needed
+        if (needsExpander) {
+            const expandIndicator = document.createElement('span');
+            expandIndicator.className = 'expand-indicator';
+            expandIndicator.innerHTML = '<svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>';
+            logEntry.appendChild(expandIndicator);
+            
+            // Add click handler
+            logEntry.addEventListener('click', function() {
+                this.classList.toggle('expanded');
+            });
+        }
+        
         logContent.appendChild(logEntry);
     });
 }
@@ -888,7 +1165,7 @@ function renderCommunities() {
         if (isAdmin) {
             const removeButton = document.createElement('button');
             removeButton.className = 'remove-btn-sidebar';
-            removeButton.innerHTML = '&times;'; // Use innerHTML for HTML entities like &times;
+            removeButton.innerHTML = '<svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>';
             removeButton.title = 'Remove community';
             removeButton.addEventListener('click', (event) => {
                 event.stopPropagation(); // Prevent li click event from firing
@@ -919,13 +1196,34 @@ function renderCommunities() {
 function selectCommunity(communityId) {
     selectedCommunity = communities.find(c => c.id === communityId);
     selectedAddress = null;
-    renderAddresses();
-
+    
+    // Add transition effect to main content
+    const mainContent = document.querySelector('main');
     const communityNameElement = document.getElementById('communityName');
     
-    if (selectedCommunity) {
-        communityNameElement.textContent = selectedCommunity.name;
+    if (mainContent && window.AnimationUtils) {
+        mainContent.classList.add('transitioning');
     }
+    
+    // Update content with slight delay for smooth transition
+    setTimeout(() => {
+        renderAddresses();
+        if (selectedCommunity) {
+            communityNameElement.textContent = selectedCommunity.name;
+        }
+        
+        // Remove transition class and add animations
+        if (mainContent) {
+            mainContent.classList.remove('transitioning');
+            
+            if (window.AnimationUtils) {
+                // Animate community name
+                AnimationUtils.animateIn(communityNameElement, 'slideInDown', 0);
+                
+                // Address items will animate automatically with their built-in delays
+            }
+        }
+    }, 100);
 
     // Initialize remoteGateControlEnabled if it's not defined
     if (typeof selectedCommunity.remoteGateControlEnabled === 'undefined') {
@@ -980,7 +1278,7 @@ async function openCommunityGate(communityName) {
 
         if (response.ok) {
             const data = await response.json();
-            alert(data.message || `Gate command sent for ${communityName}`);
+            // Success - no alert needed
         } else {
             const errorData = await response.json();
             alert(`Failed to send gate command: ${errorData.error || response.statusText}`);
@@ -999,12 +1297,20 @@ function renderAddresses() {
     addressList.innerHTML = ''; // Clear existing list items
 
     if (selectedCommunity && selectedCommunity.addresses) {
-        selectedCommunity.addresses.forEach(address => {
+        selectedCommunity.addresses.forEach((address, index) => {
             const li = document.createElement('li');
-            li.className = 'address-item';
+            li.className = 'address-item animate-in';
             li.setAttribute('data-address-id', address.id);
+            li.style.animationDelay = `${index * 0.05}s`;
             if (address.isNew) {
                 li.classList.add('new-address');
+                // Add animation for new address
+                if (window.AnimationUtils) {
+                    setTimeout(() => {
+                        AnimationUtils.animateIn(li, 'fadeInUp');
+                        AnimationUtils.pulse(li);
+                    }, 100);
+                }
                 setTimeout(() => {
                     // address.isNew is a temporary client-side flag, no need to persist this change via API
                     const currentAddress = selectedCommunity.addresses.find(a => a.id === address.id);
@@ -1036,11 +1342,11 @@ function renderAddresses() {
             addressDetailsDiv.className = 'address-details';
             addressDetailsDiv.id = `details-${address.id}`;
 
-            // User IDs section
+            // Users section
             const userIdsDiv = document.createElement('div');
             userIdsDiv.className = 'user-ids';
             const userIdsH4 = document.createElement('h4');
-            userIdsH4.textContent = 'User IDs:';
+            userIdsH4.textContent = 'Users:';
             userIdsDiv.appendChild(userIdsH4);
             const userIdListUl = document.createElement('ul');
             userIdListUl.className = 'user-id-list';
@@ -1077,14 +1383,39 @@ function renderAddresses() {
 
             // Add "Trigger Relay" button if address.hasGate is true
             if (address.hasGate === true) {
+                // Create gate controls section
+                const gateControlsDiv = document.createElement('div');
+                gateControlsDiv.className = 'gate-controls';
+                
+                const gateH4 = document.createElement('h4');
+                gateH4.textContent = 'Access Control:';
+                gateControlsDiv.appendChild(gateH4);
+                
                 const openGateAddressBtn = document.createElement('button');
-                openGateAddressBtn.textContent = 'Trigger Relay'; // Changed text content
-                openGateAddressBtn.className = 'add-btn address-open-gate-btn'; // Using 'add-btn' for existing styling, plus a specific class
-                openGateAddressBtn.addEventListener('click', () => openAddressGate(selectedCommunity.name, address.street));
-                // Ensure codesDiv is appended before this button for correct order
-                // The current structure already appends codesDiv to addressDetailsDiv before this block,
-                // and this button is also appended to addressDetailsDiv.
-                addressDetailsDiv.appendChild(openGateAddressBtn); 
+                openGateAddressBtn.textContent = 'Trigger Relay';
+                openGateAddressBtn.className = 'add-btn address-open-gate-btn';
+                openGateAddressBtn.addEventListener('click', async () => {
+                    // Store original text
+                    const originalText = openGateAddressBtn.textContent;
+                    
+                    // Set loading state
+                    openGateAddressBtn.textContent = 'Triggering...';
+                    openGateAddressBtn.disabled = true;
+                    openGateAddressBtn.classList.add('loading');
+                    
+                    try {
+                        await openAddressGate(selectedCommunity.name, address.street);
+                    } finally {
+                        // Restore original state after a brief delay
+                        setTimeout(() => {
+                            openGateAddressBtn.textContent = originalText;
+                            openGateAddressBtn.disabled = false;
+                            openGateAddressBtn.classList.remove('loading');
+                        }, 1000);
+                    }
+                });
+                gateControlsDiv.appendChild(openGateAddressBtn);
+                addressDetailsDiv.appendChild(gateControlsDiv);
             }
         });
     }
@@ -1119,7 +1450,7 @@ async function openAddressGate(communityName, streetAddress) {
 
         if (response.ok) {
             const data = await response.json();
-            alert(data.message || `Gate command sent for ${streetAddress} in ${communityName}`);
+            // Success - no alert needed
         } else {
             const errorData = await response.json();
             alert(`Failed to send gate command for address: ${errorData.error || response.statusText}`);
@@ -1136,7 +1467,28 @@ async function openAddressGate(communityName, streetAddress) {
  */
 function toggleAddressDetails(addressId) {
     const detailsElement = document.getElementById(`details-${addressId}`);
-    detailsElement.classList.toggle('show');
+    const addressItem = detailsElement.closest('.address-item');
+    
+    // Add smooth transition effect
+    if (detailsElement.classList.contains('show')) {
+        // Closing
+        detailsElement.classList.remove('show');
+        if (addressItem && window.AnimationUtils) {
+            setTimeout(() => {
+                AnimationUtils.pulse(addressItem);
+            }, 150);
+        }
+    } else {
+        // Opening
+        detailsElement.classList.add('show');
+        if (addressItem && window.AnimationUtils) {
+            setTimeout(() => {
+                // Animate user IDs and codes
+                const userItems = detailsElement.querySelectorAll('.user-id-list li, .code-list li');
+                AnimationUtils.staggerAnimation(userItems, 'fadeInUp', 50);
+            }, 200);
+        }
+    }
 }
 
 /**
@@ -1154,14 +1506,14 @@ function renderUserIds(address) {
             li.setAttribute('data-person-id', person.id);
 
             const removePersonBtn = document.createElement('button');
-            removePersonBtn.className = 'remove-btn';
-            removePersonBtn.textContent = '-';
+            removePersonBtn.className = 'remove-btn-user';
+            removePersonBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>';
             removePersonBtn.title = `Remove user ${person.username}`;
             removePersonBtn.addEventListener('click', () => removeUserId(address.id, person.id));
             li.appendChild(removePersonBtn);
 
             const personDetailsSpan = document.createElement('span');
-            personDetailsSpan.textContent = `${person.username} (Player ID: ${person.playerId})`;
+            personDetailsSpan.textContent = `${person.username} (ID: ${person.playerId})`;
             li.appendChild(personDetailsSpan);
 
             userIdList.appendChild(li);
@@ -1184,8 +1536,8 @@ function renderCodes(address) {
             li.setAttribute('data-code-id', code.id);
 
             const removeCodeBtn = document.createElement('button');
-            removeCodeBtn.className = 'remove-btn';
-            removeCodeBtn.textContent = '-';
+            removeCodeBtn.className = 'remove-btn-user';
+            removeCodeBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>';
             removeCodeBtn.title = `Remove code ${code.description}`;
             removeCodeBtn.addEventListener('click', () => removeCode(address.id, code.id));
             li.appendChild(removeCodeBtn);
@@ -1202,50 +1554,97 @@ function renderCodes(address) {
 /**
  * Adds a new community by prompting for a name and sending a POST request.
  */
-async function addCommunity() {
+/**
+ * Shows the custom add community popup
+ */
+function showAddCommunityModal() {
     if (communities.length >= 8) {
         alert('Maximum number of communities reached');
         return;
     }
-    const name = prompt('Enter community name (no spaces allowed):');
-    if (name) {
-        if (name.includes(' ')) {
-            alert('Community name cannot contain spaces. Please try again.');
-            return;
+    
+    const modal = document.getElementById('addCommunityModal');
+    const nameInput = document.getElementById('communityNameInput');
+    const descriptionInput = document.getElementById('communityDescriptionInput');
+    
+    // Clear previous values
+    nameInput.value = '';
+    descriptionInput.value = '';
+    
+    // Show modal
+    modal.classList.add('popup-visible');
+    
+    // Focus first input
+    setTimeout(() => nameInput.focus(), 100);
+}
+
+/**
+ * Closes the add community modal
+ */
+function closeAddCommunityModal() {
+    const modal = document.getElementById('addCommunityModal');
+    modal.classList.remove('popup-visible');
+}
+
+/**
+ * Saves the community from the modal
+ */
+async function saveCommunityFromModal() {
+    const name = document.getElementById('communityNameInput').value.trim();
+    const description = document.getElementById('communityDescriptionInput').value.trim();
+    
+    if (!name) {
+        alert('Please enter a community name');
+        return;
+    }
+    
+    try {
+        // Show loading overlay on sidebar
+        if (window.AnimationUtils) {
+            AnimationUtils.showLoading('communityList', 'Creating community');
         }
-        try {
-            const response = await fetch('/api/communities', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': csrfToken
-                },
-                body: JSON.stringify({ name }),
-                credentials: 'include'
-            });
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to add community');
+        
+        const response = await fetch('/api/communities', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ name, description }),
+            credentials: 'include'
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to add community');
+        }
+        if (data.community) {
+            communities.push(data.community);
+            renderCommunities();
+            selectCommunity(data.community.id);
+            updateAddCommunityButtonVisibility();
+            const addAddressBtn = document.getElementById('addAddressBtn');
+            const addressesHeader = document.querySelector('main h3');
+            if (communities.length > 0) {
+                addAddressBtn.style.display = 'block';
+                addressesHeader.style.display = 'block';
             }
-            if (data.community) {
-                communities.push(data.community);
-                renderCommunities();
-                selectCommunity(data.community.id);
-                updateAddCommunityButtonVisibility();
-                const addAddressBtn = document.getElementById('addAddressBtn');
-                const addressesHeader = document.querySelector('main h3');
-                if (communities.length > 0) {
-                    addAddressBtn.style.display = 'block';
-                    addressesHeader.style.display = 'block';
-                }
-            } else {
-                throw new Error('Invalid server response');
-            }
-        } catch (error) {
-            console.error('Error adding community:', error);
-            alert(error.message || 'An error occurred while adding the community');
+            closeAddCommunityModal();
+        } else {
+            throw new Error('Invalid server response');
+        }
+    } catch (error) {
+        console.error('Error adding community:', error);
+        alert(error.message || 'An error occurred while adding the community');
+    } finally {
+        // Hide loading overlay
+        if (window.AnimationUtils) {
+            AnimationUtils.hideLoading('communityList');
         }
     }
+}
+
+async function addCommunity() {
+    showAddCommunityModal();
 }
 
 /**
@@ -1319,41 +1718,80 @@ function updateAddCommunityButtonVisibility() {
 }
 
 /**
+ * Shows the custom add address popup
+ */
+function showAddAddressModal() {
+    if (!selectedCommunity) return;
+    
+    const modal = document.getElementById('addAddressModal');
+    const streetInput = document.getElementById('addressStreetInput');
+    const hasGateInput = document.getElementById('addressHasGateInput');
+    const hasGateBtn = document.getElementById('addressHasGateBtn');
+    
+    // Clear previous values
+    streetInput.value = '';
+    hasGateInput.value = 'false';
+    hasGateBtn.classList.remove('active');
+    
+    // Show modal
+    modal.classList.add('popup-visible');
+    
+    // Focus first input
+    setTimeout(() => streetInput.focus(), 100);
+}
+
+/**
+ * Closes the add address modal
+ */
+function closeAddAddressModal() {
+    const modal = document.getElementById('addAddressModal');
+    modal.classList.remove('popup-visible');
+}
+
+/**
+ * Saves the address from the modal
+ */
+async function saveAddressFromModal() {
+    const street = document.getElementById('addressStreetInput').value.trim();
+    const hasGate = document.getElementById('addressHasGateInput').value === 'true';
+    
+    if (!street) {
+        alert('Please enter a street address');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/communities/${selectedCommunity.id}/addresses`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ street, hasGate }),
+            credentials: 'include'
+        });
+        if (!response.ok) {
+            throw new Error('Failed to add address');
+        }
+        const newAddress = await response.json();
+        newAddress.isNew = true;
+        if (!selectedCommunity.addresses) {
+            selectedCommunity.addresses = [];
+        }
+        selectedCommunity.addresses.push(newAddress);
+        renderAddresses();
+        closeAddAddressModal();
+    } catch (error) {
+        console.error('Error adding address:', error);
+        alert('Failed to add address. Please try again.');
+    }
+}
+
+/**
  * Adds a new address to the selected community.
  */
 async function addAddress() {
-    if (!selectedCommunity) return;
-    const street = prompt('Enter address:');
-    if (street) {
-        const hasGate = await promptForGateConfirmation(); // Modified this line
-        // If promptForGateConfirmation resolved to undefined (e.g. modal closed via ESC or other means not handled)
-        // default to false or handle as an abort. For now, let it proceed, which might result in 'undefined'.
-        // A more robust solution might involve the promise rejecting or resolving with a specific "abort" symbol.
-        try {
-            const response = await fetch(`/api/communities/${selectedCommunity.id}/addresses`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': csrfToken
-                },
-                body: JSON.stringify({ street, hasGate }), // Modified this line
-                credentials: 'include'
-            });
-            if (!response.ok) {
-                throw new Error('Failed to add address');
-            }
-            const newAddress = await response.json();
-            newAddress.isNew = true;
-            if (!selectedCommunity.addresses) {
-                selectedCommunity.addresses = [];
-            }
-            selectedCommunity.addresses.push(newAddress);
-            renderAddresses();
-        } catch (error) {
-            console.error('Error adding address:', error);
-            alert('Failed to add address. Please try again.');
-        }
-    }
+    showAddAddressModal();
 }
 
 /**
@@ -1385,39 +1823,87 @@ async function removeAddress(addressId) {
 }
 
 /**
+ * Shows the custom add user ID popup
+ * @param {string} addressId - The ID of the address.
+ */
+function showAddUserIdModal(addressId) {
+    const modal = document.getElementById('addUserIdModal');
+    const usernameInput = document.getElementById('userIdUsernameInput');
+    const playerIdInput = document.getElementById('userIdPlayerIdInput');
+    
+    // Clear previous values
+    usernameInput.value = '';
+    playerIdInput.value = '';
+    
+    // Store addressId for later use
+    modal.dataset.addressId = addressId;
+    
+    // Show modal
+    modal.classList.add('popup-visible');
+    
+    // Focus first input
+    setTimeout(() => usernameInput.focus(), 100);
+}
+
+/**
+ * Closes the add user ID modal
+ */
+function closeAddUserIdModal() {
+    const modal = document.getElementById('addUserIdModal');
+    modal.classList.remove('popup-visible');
+}
+
+/**
+ * Saves the user ID from the modal
+ */
+async function saveUserIdFromModal() {
+    const modal = document.getElementById('addUserIdModal');
+    const addressId = modal.dataset.addressId;
+    const username = document.getElementById('userIdUsernameInput').value.trim();
+    const playerId = document.getElementById('userIdPlayerIdInput').value.trim();
+    
+    if (!username || !playerId) {
+        alert('Please fill in both fields');
+        return;
+    }
+    
+    const address = selectedCommunity.addresses.find(a => a.id === addressId);
+    if (!address) return;
+    
+    try {
+        const response = await fetch(`/api/communities/${selectedCommunity.id}/addresses/${addressId}/people`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ username, playerId }),
+            credentials: 'include'
+        });
+        if (response.ok) {
+            const newUserId = await response.json();
+            if (!address.people) {
+                address.people = [];
+            }
+            address.people.push(newUserId);
+            renderUserIds(address);
+            closeAddUserIdModal();
+        } else {
+            console.error('Failed to add user ID:', response.statusText);
+            alert('Failed to add resident');
+        }
+    } catch (error) {
+        console.error('Error adding user ID:', error);
+        alert('Failed to add resident');
+    }
+}
+
+/**
  * Adds a new user ID to an address.
  * @param {string} addressId - The ID of the address.
  */
 async function addUserId(addressId) {
-    const address = selectedCommunity.addresses.find(a => a.id === addressId);
-    if (!address) return;
-    const username = prompt('Enter username:');
-    const playerId = prompt('Enter player ID:');
-    if (username && playerId) {
-        try {
-            const response = await fetch(`/api/communities/${selectedCommunity.id}/addresses/${addressId}/people`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': csrfToken
-                },
-                body: JSON.stringify({ username, playerId }),
-                credentials: 'include'
-            });
-            if (response.ok) {
-                const newUserId = await response.json();
-                if (!address.people) {
-                    address.people = [];
-                }
-                address.people.push(newUserId);
-                renderUserIds(address);
-            } else {
-                console.error('Failed to add user ID:', response.statusText);
-            }
-        } catch (error) {
-            console.error('Error adding user ID:', error);
-        }
-    }
+    showAddUserIdModal(addressId);
 }
 
 /**
@@ -1654,3 +2140,407 @@ function promptForGateConfirmation() {
 
 // Fetch initial CSRF token and data (already set up in DOMContentLoaded above)
 // fetchData(); // Called by checkLoginStatus
+
+/********************************************************
+  NEW ACCESS MANAGEMENT SYSTEM
+*********************************************************/
+
+let selectedUsersForAccess = [];
+let searchResultsVisible = false;
+
+/**
+ * Utility function for debouncing
+ */
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+/**
+ * Opens the access management popup
+ */
+function openAccessManagementPopup() {
+    if (!selectedCommunity) {
+        alert('Please select a community first');
+        return;
+    }
+
+    const popup = document.getElementById('accessManagementPopup');
+    const communityName = document.getElementById('accessCommunityName');
+    
+    if (communityName) {
+        communityName.textContent = selectedCommunity.name;
+    }
+    
+    renderCurrentAccessList();
+    clearUserSelection();
+    
+    popup.classList.remove('hidden');
+    popup.style.display = 'block';
+}
+
+/**
+ * Closes the access management popup
+ */
+function closeAccessManagementPopup() {
+    const popup = document.getElementById('accessManagementPopup');
+    if (popup) {
+        popup.classList.add('hidden');
+        popup.style.display = 'none';
+    }
+    
+    // Clear search and selections
+    clearUserSelection();
+    hideUserSearchResults();
+}
+
+// Close popup with Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        const popup = document.getElementById('accessManagementPopup');
+        if (popup && !popup.classList.contains('hidden')) {
+            closeAccessManagementPopup();
+        }
+    }
+});
+
+/**
+ * Renders the current access list
+ */
+function renderCurrentAccessList() {
+    const accessList = document.getElementById('currentAccessList');
+    if (!accessList) return;
+
+    accessList.innerHTML = '';
+
+    if (!selectedCommunity || !selectedCommunity.allowedUsers || selectedCommunity.allowedUsers.length === 0) {
+        accessList.innerHTML = '<div class="empty-access-message">No users have access to this community yet.</div>';
+        return;
+    }
+
+    selectedCommunity.allowedUsers.forEach(username => {
+        const user = users.find(u => u.username === username);
+        const userItem = document.createElement('div');
+        userItem.className = 'user-access-item';
+        
+        const userInfo = document.createElement('div');
+        userInfo.className = 'user-access-info';
+        
+        const avatar = document.createElement('div');
+        avatar.className = 'user-avatar';
+        avatar.textContent = username.charAt(0).toUpperCase();
+        
+        const details = document.createElement('div');
+        details.className = 'user-details';
+        
+        const name = document.createElement('div');
+        name.className = 'user-name';
+        name.textContent = username;
+        
+        const role = document.createElement('div');
+        role.className = 'user-role';
+        role.textContent = user ? user.role : 'User';
+        
+        details.appendChild(name);
+        details.appendChild(role);
+        userInfo.appendChild(avatar);
+        userInfo.appendChild(details);
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-access-btn';
+        removeBtn.textContent = 'Remove';
+        removeBtn.onclick = () => removeUserAccess(username);
+        
+        // Don't allow removing admin access
+        if (user && (user.role === 'admin' || user.role === 'superuser')) {
+            removeBtn.disabled = true;
+            removeBtn.textContent = 'Protected';
+        }
+        
+        userItem.appendChild(userInfo);
+        userItem.appendChild(removeBtn);
+        accessList.appendChild(userItem);
+    });
+}
+
+/**
+ * Removes access for a specific user
+ */
+async function removeUserAccess(username) {
+    if (!selectedCommunity) return;
+
+    try {
+        selectedCommunity.allowedUsers = selectedCommunity.allowedUsers.filter(u => u !== username);
+        
+        const response = await fetch(`/api/communities/${selectedCommunity.id}/allowed-users`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ allowedUsers: selectedCommunity.allowedUsers }),
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.warning) {
+                alert(data.warning);
+            }
+            selectedCommunity.allowedUsers = data.validUsers;
+            renderCurrentAccessList();
+            renderAllowedUsers(); // Update legacy view if visible
+        } else {
+            const errorData = await response.json();
+            alert(`Error: ${errorData.error}`);
+            // Revert on error
+            selectedCommunity.allowedUsers.push(username);
+        }
+    } catch (error) {
+        console.error('Error removing user access:', error);
+        alert('Failed to remove user access');
+        // Revert on error
+        selectedCommunity.allowedUsers.push(username);
+    }
+}
+
+/**
+ * Searches for users based on input
+ */
+function searchUsers() {
+    const searchInput = document.getElementById('userSearchInput');
+    const searchResults = document.getElementById('userSearchResults');
+    
+    if (!searchInput || !searchResults) {
+        console.error('Search input or results container not found');
+        return;
+    }
+    
+    const query = searchInput.value.trim().toLowerCase();
+    
+    if (query.length < 1) {
+        hideUserSearchResults();
+        return;
+    }
+    
+    // Ensure users array exists and has data
+    if (!users || users.length === 0) {
+        console.warn('No users available for search');
+        const noUsersResult = document.createElement('div');
+        noUsersResult.className = 'user-search-item';
+        noUsersResult.textContent = 'No users available';
+        searchResults.innerHTML = '';
+        searchResults.appendChild(noUsersResult);
+        showUserSearchResults();
+        return;
+    }
+    
+    // Ensure selectedCommunity exists and has allowedUsers
+    const allowedUsers = selectedCommunity && selectedCommunity.allowedUsers ? selectedCommunity.allowedUsers : [];
+    
+    // Filter users that don't already have access and match the search
+    const filteredUsers = users.filter(user => {
+        const hasAccess = allowedUsers.includes(user.username);
+        const matchesSearch = user.username.toLowerCase().includes(query);
+        return !hasAccess && matchesSearch;
+    });
+    
+    console.log(`Search query: "${query}", Found ${filteredUsers.length} users`);
+    
+    renderUserSearchResults(filteredUsers);
+    showUserSearchResults();
+}
+
+/**
+ * Renders user search results
+ */
+function renderUserSearchResults(filteredUsers) {
+    const searchResults = document.getElementById('userSearchResults');
+    if (!searchResults) return;
+    
+    searchResults.innerHTML = '';
+    
+    if (filteredUsers.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'user-search-item';
+        noResults.textContent = 'No users found';
+        searchResults.appendChild(noResults);
+        return;
+    }
+    
+    filteredUsers.forEach(user => {
+        const userItem = document.createElement('div');
+        userItem.className = 'user-search-item';
+        
+        const avatar = document.createElement('div');
+        avatar.className = 'user-avatar';
+        avatar.style.width = '24px';
+        avatar.style.height = '24px';
+        avatar.style.fontSize = '0.75rem';
+        avatar.textContent = user.username.charAt(0).toUpperCase();
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = user.username;
+        
+        userItem.appendChild(avatar);
+        userItem.appendChild(nameSpan);
+        
+        userItem.onclick = () => selectUserForAccess(user);
+        
+        searchResults.appendChild(userItem);
+    });
+}
+
+/**
+ * Shows user search results
+ */
+function showUserSearchResults() {
+    const searchResults = document.getElementById('userSearchResults');
+    if (searchResults && searchResults.children.length > 0) {
+        searchResults.classList.remove('hidden');
+        searchResultsVisible = true;
+    }
+}
+
+/**
+ * Hides user search results
+ */
+function hideUserSearchResults() {
+    const searchResults = document.getElementById('userSearchResults');
+    if (searchResults) {
+        searchResults.classList.add('hidden');
+        searchResultsVisible = false;
+    }
+}
+
+/**
+ * Selects a user for access
+ */
+function selectUserForAccess(user) {
+    if (!selectedUsersForAccess.find(u => u.username === user.username)) {
+        selectedUsersForAccess.push(user);
+        renderSelectedUsersChips();
+        updateGrantAccessButton();
+    }
+    
+    // Clear search
+    const searchInput = document.getElementById('userSearchInput');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    hideUserSearchResults();
+}
+
+/**
+ * Renders selected users as chips
+ */
+function renderSelectedUsersChips() {
+    const chipsContainer = document.getElementById('selectedUsersChips');
+    if (!chipsContainer) return;
+    
+    chipsContainer.innerHTML = '';
+    
+    selectedUsersForAccess.forEach(user => {
+        const chip = document.createElement('div');
+        chip.className = 'user-chip';
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = user.username;
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.innerHTML = '×';
+        removeBtn.onclick = () => removeUserFromSelection(user.username);
+        
+        chip.appendChild(nameSpan);
+        chip.appendChild(removeBtn);
+        chipsContainer.appendChild(chip);
+    });
+}
+
+/**
+ * Removes a user from selection
+ */
+function removeUserFromSelection(username) {
+    selectedUsersForAccess = selectedUsersForAccess.filter(u => u.username !== username);
+    renderSelectedUsersChips();
+    updateGrantAccessButton();
+}
+
+/**
+ * Updates the grant access button state
+ */
+function updateGrantAccessButton() {
+    const grantBtn = document.getElementById('grantAccessBtn');
+    if (!grantBtn) return;
+    
+    if (selectedUsersForAccess.length > 0) {
+        grantBtn.disabled = false;
+        grantBtn.textContent = `Grant Access (${selectedUsersForAccess.length})`;
+    } else {
+        grantBtn.disabled = true;
+        grantBtn.textContent = 'Grant Access';
+    }
+}
+
+/**
+ * Grants access to selected users
+ */
+async function grantSelectedUsersAccess() {
+    if (!selectedCommunity || selectedUsersForAccess.length === 0) return;
+    
+    const usernames = selectedUsersForAccess.map(u => u.username);
+    const newAllowedUsers = [...selectedCommunity.allowedUsers, ...usernames];
+    
+    try {
+        const response = await fetch(`/api/communities/${selectedCommunity.id}/allowed-users`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ allowedUsers: newAllowedUsers }),
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.warning) {
+                alert(data.warning);
+            }
+            selectedCommunity.allowedUsers = data.validUsers;
+            renderCurrentAccessList();
+            renderAllowedUsers(); // Update legacy view if visible
+            clearUserSelection();
+        } else {
+            const errorData = await response.json();
+            alert(`Error: ${errorData.error}`);
+        }
+    } catch (error) {
+        console.error('Error granting user access:', error);
+        alert('Failed to grant user access');
+    }
+}
+
+/**
+ * Clears user selection
+ */
+function clearUserSelection() {
+    selectedUsersForAccess = [];
+    renderSelectedUsersChips();
+    updateGrantAccessButton();
+    
+    const searchInput = document.getElementById('userSearchInput');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+}
+
+// Export functions for global access (used by search component)
+window.selectCommunity = selectCommunity;

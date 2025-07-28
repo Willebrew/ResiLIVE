@@ -36,58 +36,52 @@ const SearchComponent = {
         const searchContainer = document.createElement('div');
         searchContainer.className = 'search-container hidden';
         searchContainer.innerHTML = `
-            <div class="search-wrapper">
-                <svg class="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
-                </svg>
-                <input type="text" id="globalSearch" placeholder="Search communities, addresses, residents, or codes..." class="search-input">
-                <button class="search-filter-btn" id="filterToggle">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd"/>
+            <div class="search-overlay-header">
+                <div class="search-wrapper">
+                    <svg class="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
                     </svg>
-                </button>
-            </div>
-            <div class="search-filters hidden" id="searchFilters">
-                <div class="filter-group">
-                    <label>Search in:</label>
-                    <label class="filter-checkbox">
-                        <input type="checkbox" name="searchType" value="communities" checked>
-                        <span>Communities</span>
-                    </label>
-                    <label class="filter-checkbox">
-                        <input type="checkbox" name="searchType" value="addresses" checked>
-                        <span>Addresses</span>
-                    </label>
-                    <label class="filter-checkbox">
-                        <input type="checkbox" name="searchType" value="residents" checked>
-                        <span>Residents</span>
-                    </label>
-                    <label class="filter-checkbox">
-                        <input type="checkbox" name="searchType" value="codes" checked>
-                        <span>Access Codes</span>
-                    </label>
+                    <input type="text" id="globalSearch" placeholder="Search communities, addresses, residents, or codes..." class="search-input">
+                    <button class="search-filter-btn" id="filterToggle">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                    <button class="search-close-btn" id="searchCloseBtn">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
                 </div>
-                <div class="filter-group">
-                    <label>Status:</label>
-                    <select id="statusFilter" class="filter-select">
-                        <option value="all">All</option>
-                        <option value="active">Active Only</option>
-                        <option value="expired">Expired Only</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Date Range:</label>
-                    <input type="date" id="dateFrom" class="filter-date">
-                    <span>to</span>
-                    <input type="date" id="dateTo" class="filter-date">
+                <div class="search-filters hidden" id="searchFilters">
+                    <div class="filter-group">
+                        <div class="filter-group-label">Search in</div>
+                        <div class="filter-toggles">
+                            <label class="filter-chip active">
+                                <input type="checkbox" name="searchType" value="communities" checked>
+                                <span>Communities</span>
+                            </label>
+                            <label class="filter-chip active">
+                                <input type="checkbox" name="searchType" value="addresses" checked>
+                                <span>Addresses</span>
+                            </label>
+                            <label class="filter-chip active">
+                                <input type="checkbox" name="searchType" value="residents" checked>
+                                <span>Residents</span>
+                            </label>
+                            <label class="filter-chip active">
+                                <input type="checkbox" name="searchType" value="codes" checked>
+                                <span>Access Codes</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="search-results hidden" id="searchResults"></div>
         `;
         
-        // Insert after topbar
-        const topbar = document.querySelector('.topbar');
-        topbar.parentNode.insertBefore(searchContainer, topbar.nextSibling);
+        // Insert as first child of body
+        document.body.insertBefore(searchContainer, document.body.firstChild);
         
         // Store references
         this.searchInput = document.getElementById('globalSearch');
@@ -108,19 +102,32 @@ const SearchComponent = {
             document.getElementById('searchFilters').classList.toggle('hidden');
         });
         
-        // Filter changes
-        document.querySelectorAll('input[name="searchType"], #statusFilter, #dateFrom, #dateTo').forEach(element => {
-            element.addEventListener('change', () => {
+        // Filter chip toggles
+        document.querySelectorAll('.filter-chip').forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                e.preventDefault();
+                const checkbox = chip.querySelector('input[type="checkbox"]');
+                const isChecked = !checkbox.checked;
+                
+                checkbox.checked = isChecked;
+                chip.classList.toggle('active', isChecked);
+                
                 if (this.searchInput.value) {
                     this.performSearch(this.searchInput.value);
                 }
             });
         });
         
-        // Click outside to close results
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.search-container')) {
-                this.searchResults.classList.add('hidden');
+        
+        // Close button
+        document.getElementById('searchCloseBtn').addEventListener('click', () => {
+            this.closeSearch();
+        });
+        
+        // Escape key to close
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !document.querySelector('.search-container').classList.contains('hidden')) {
+                this.closeSearch();
             }
         });
     },
@@ -150,10 +157,7 @@ const SearchComponent = {
             .map(cb => cb.value);
         
         return {
-            types: searchTypes,
-            status: document.getElementById('statusFilter').value,
-            dateFrom: document.getElementById('dateFrom').value,
-            dateTo: document.getElementById('dateTo').value
+            types: searchTypes
         };
     },
     
@@ -220,19 +224,6 @@ const SearchComponent = {
                             if (filters.types.includes('codes') && person.codes) {
                                 person.codes.forEach(code => {
                                     const isExpired = new Date(code.expiresAt) < new Date();
-                                    
-                                    // Apply status filter
-                                    if (filters.status !== 'all') {
-                                        if (filters.status === 'active' && isExpired) return;
-                                        if (filters.status === 'expired' && !isExpired) return;
-                                    }
-                                    
-                                    // Apply date filter
-                                    if (filters.dateFrom || filters.dateTo) {
-                                        const codeDate = new Date(code.createdAt);
-                                        if (filters.dateFrom && codeDate < new Date(filters.dateFrom)) return;
-                                        if (filters.dateTo && codeDate > new Date(filters.dateTo)) return;
-                                    }
                                     
                                     if (code.code.toLowerCase().includes(queryLower) || 
                                         code.description.toLowerCase().includes(queryLower)) {
@@ -355,8 +346,7 @@ const SearchComponent = {
         const community = communities.find(c => c.id === communityId);
         if (community) {
             window.selectCommunity(communityId);
-            this.searchResults.classList.add('hidden');
-            this.searchInput.value = '';
+            this.closeSearch();
         }
     },
     
@@ -372,8 +362,7 @@ const SearchComponent = {
                 }
             }, 300);
         }
-        this.searchResults.classList.add('hidden');
-        this.searchInput.value = '';
+        this.closeSearch();
     },
     
     selectResident(communityId, addressId, personId) {
@@ -409,6 +398,15 @@ const SearchComponent = {
             if (!searchContainer.classList.contains('hidden')) {
                 this.searchInput.focus();
             }
+        }
+    },
+    
+    closeSearch() {
+        const searchContainer = document.querySelector('.search-container');
+        if (searchContainer) {
+            searchContainer.classList.add('hidden');
+            this.searchInput.value = '';
+            this.searchResults.classList.add('hidden');
         }
     }
 };
