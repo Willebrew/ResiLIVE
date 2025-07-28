@@ -742,10 +742,15 @@
     background-color: var(--color-success-hover);
 }
 
+[data-theme="light"] #communityList li:hover {
+    background-color: #f3f4f6;
+    color: var(--color-text);
+}
+
 [data-theme="light"] #communityList li.active {
     background-color: #e5e7eb;
     color: var(--color-text);
-    outline: 2px solid #9ca3af;
+    outline: 2px solid #d1d5db;
 }
 
 [data-theme="light"] #addressList li:hover {
@@ -904,4 +909,9 @@
 [data-theme="light"] .settings-dropdown {
     background: white;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .sidebar {
+    background-color: var(--color-bg);
+    border-right-color: var(--color-border);
 }
