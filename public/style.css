@@ -109,7 +109,6 @@ h1, h2, h3, h4, p {
     height: 3px;
     background: var(--color-text);
     margin: 4px 0;
-    transition: 0.3s;
 }
 
 @media (max-width: 900px) {
