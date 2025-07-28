@@ -997,6 +997,7 @@ function renderAddresses() {
         selectedCommunity.addresses.forEach(address => {
             const li = document.createElement('li');
             li.className = 'address-item';
+            li.setAttribute('data-address-id', address.id);
             if (address.isNew) {
                 li.classList.add('new-address');
                 setTimeout(() => {
@@ -1145,6 +1146,7 @@ function renderUserIds(address) {
     if (address.people) {
         address.people.forEach(person => {
             const li = document.createElement('li');
+            li.setAttribute('data-person-id', person.id);
 
             const removePersonBtn = document.createElement('button');
             removePersonBtn.className = 'remove-btn';
@@ -1174,6 +1176,7 @@ function renderCodes(address) {
     if (address.codes) {
         address.codes.forEach(code => {
             const li = document.createElement('li');
+            li.setAttribute('data-code-id', code.id);
 
             const removeCodeBtn = document.createElement('button');
             removeCodeBtn.className = 'remove-btn';
