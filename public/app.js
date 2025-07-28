@@ -174,6 +174,16 @@ async function checkLoginStatus() {
             currentUserId = data.userId;
             updateUserName(data.username);
             isAdmin = data.role === 'admin' || data.role === 'superuser';
+            
+            // Set authentication status for ThemeManager
+            if (typeof ThemeManager !== 'undefined') {
+                ThemeManager.setAuthenticated(true);
+                
+                // Apply theme from server
+                const serverTheme = data.theme || 'dark';
+                ThemeManager.applyInitialTheme(serverTheme);
+            }
+            
             const allowedUsersManagement = document.getElementById('allowedUsersManagement');
             if (isAdmin) {
                 if (allowedUsersManagement) allowedUsersManagement.classList.remove('hidden'); // CSP Refactor
@@ -188,6 +198,11 @@ async function checkLoginStatus() {
             }
             fetchData();
         } else {
+            // Not authenticated - apply theme from localStorage before redirect
+            if (typeof ThemeManager !== 'undefined') {
+                const localTheme = localStorage.getItem('resilive-theme') || 'dark';
+                ThemeManager.applyInitialTheme(localTheme);
+            }
             updateUserName('Guest');
             window.location.href = '/login.html';
         }
