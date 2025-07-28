@@ -411,11 +411,12 @@ h1, h2, h3, h4, p {
   ALLOWED USERS SECTION
 *********************************************************/
 #allowedUsersManagement {
-    background-color: var(--color-card);
+    background-color: var(--color-surface, var(--color-card));
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
-    padding: 10px;
+    padding: 16px;
     color: var(--color-text);
+    margin-top: 20px;
 }
 
 #allowedUsersManagement h3 {
