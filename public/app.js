@@ -1368,7 +1368,7 @@ function renderAddresses() {
             userIdsDiv.appendChild(userIdListUl); // ul will be populated by renderUserIds
             const addUserIdBtn = document.createElement('button');
             addUserIdBtn.className = 'add-btn';
-            addUserIdBtn.textContent = 'Add User ID';
+            addUserIdBtn.textContent = 'Add User';
             addUserIdBtn.addEventListener('click', () => addUserId(address.id));
             userIdsDiv.appendChild(addUserIdBtn);
             addressDetailsDiv.appendChild(userIdsDiv);
