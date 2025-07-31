@@ -1100,7 +1100,7 @@ function displayLogs(logs) {
         
         // Format timestamp more compactly
         const date = new Date(log.timestamp);
-        const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+        const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
         const dateOptions = { month: 'short', day: 'numeric' };
         const time = date.toLocaleTimeString('en-US', timeOptions);
         const dateStr = date.toLocaleDateString('en-US', dateOptions);
