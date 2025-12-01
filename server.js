@@ -1366,7 +1366,13 @@ async function removeExpiredCodes() {
             community.addresses.forEach(address => {
                 if (address.codes) {
                     const initialLength = address.codes.length;
-                    address.codes = address.codes.filter(code => new Date(code.expiresAt) > now);
+                    address.codes = address.codes.filter(code => {
+                        // Keep codes with no expiration date (never expire)
+                        if (!code.expiresAt) {
+                            return true;
+                        }
+                        return new Date(code.expiresAt) > now;
+                    });
                     if (address.codes.length < initialLength) {
                         codesRemoved = true;
                     }
