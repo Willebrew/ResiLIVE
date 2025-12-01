@@ -584,13 +584,13 @@ function setupUIEventListeners() {
             const codeValue = document.getElementById('codeValueInput').value; // Renamed to avoid conflict
             const expiryDateInstance = window.codeExpiryFlatpickr; // Get the flatpickr instance
 
-            if (!expiryDateInstance || expiryDateInstance.selectedDates.length === 0) {
-                alert('Please select an expiration date and time.');
-                return;
+            // Determine expiresAt value; if no date is selected, leave it undefined (no expiry)
+            let expiresAt;
+            if (expiryDateInstance && expiryDateInstance.selectedDates.length > 0) {
+                expiresAt = expiryDateInstance.selectedDates[0].toISOString();
             }
-            const expiresAt = expiryDateInstance.selectedDates[0].toISOString();
 
-            if (description && codeValue && expiresAt && addressId) {
+            if (description && codeValue && addressId) {
                 try {
                     // Ensure selectedCommunity and selectedCommunity.id are valid
                     if (!selectedCommunity || !selectedCommunity.id) {
@@ -628,7 +628,7 @@ function setupUIEventListeners() {
                     alert('An error occurred while adding the code.');
                 }
             } else {
-                alert('Please fill in all fields: description, code, and expiration date.');
+                alert('Please fill in the required fields: description and code.');
             }
         });
     }
