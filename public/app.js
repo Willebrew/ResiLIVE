@@ -1430,6 +1430,31 @@ function renderAddresses() {
                     }
                 });
                 gateControlsDiv.appendChild(openGateAddressBtn);
+
+                // Add Pairing Mode button (10 second relay hold for RFID pairing)
+                const pairingModeBtn = document.createElement('button');
+                pairingModeBtn.textContent = 'Pairing Mode';
+                pairingModeBtn.className = 'add-btn pairing-mode-btn';
+                pairingModeBtn.style.marginLeft = '8px';
+                pairingModeBtn.addEventListener('click', async () => {
+                    const originalText = pairingModeBtn.textContent;
+                    pairingModeBtn.textContent = 'Pairing (10s)...';
+                    pairingModeBtn.disabled = true;
+                    pairingModeBtn.classList.add('loading');
+
+                    try {
+                        await activatePairingMode(selectedCommunity.name, address.street);
+                    } finally {
+                        // Keep button disabled for 10 seconds while relay is open
+                        setTimeout(() => {
+                            pairingModeBtn.textContent = originalText;
+                            pairingModeBtn.disabled = false;
+                            pairingModeBtn.classList.remove('loading');
+                        }, 10000);
+                    }
+                });
+                gateControlsDiv.appendChild(pairingModeBtn);
+
                 addressDetailsDiv.appendChild(gateControlsDiv);
             }
         });
@@ -1473,6 +1498,43 @@ async function openAddressGate(communityName, streetAddress) {
     } catch (error) {
         console.error('Error sending address gate command:', error);
         alert('An error occurred while sending the address gate command. Please check the console.');
+    }
+}
+
+/**
+ * Activates pairing mode for a specific address (10 second relay hold).
+ * @param {string} communityName - The name of the community.
+ * @param {string} streetAddress - The street address for which to activate pairing mode.
+ */
+async function activatePairingMode(communityName, streetAddress) {
+    if (!communityName || !streetAddress) {
+        alert('Community name and street address are required for pairing mode.');
+        return;
+    }
+
+    if (!csrfToken) {
+        alert('CSRF token not available. Please refresh the page.');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/command/pairing-mode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ community: communityName, address: streetAddress }),
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            alert(`Failed to activate pairing mode: ${errorData.error || response.statusText}`);
+        }
+    } catch (error) {
+        console.error('Error activating pairing mode:', error);
+        alert('An error occurred while activating pairing mode. Please check the console.');
     }
 }
 

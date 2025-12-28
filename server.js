@@ -301,6 +301,48 @@ app.post('/api/command/open-gate', requireAuth, async (req, res) => {
     }
 });
 
+// Route for pairing mode (10 second relay hold for RFID tag pairing)
+app.post('/api/command/pairing-mode', requireAuth, async (req, res) => {
+    const { community, address } = req.body;
+
+    if (!community || !address) {
+        return res.status(400).json({ error: 'Community and address are required for pairing mode' });
+    }
+
+    try {
+        const communitySnapshot = await db.collection('communities')
+            .where('name', '==', community)
+            .get();
+
+        if (communitySnapshot.empty) {
+            return res.status(404).json({ error: 'Community not found' });
+        }
+
+        const communityDoc = communitySnapshot.docs[0];
+        const communityData = communityDoc.data();
+
+        // Check if user is admin/superuser or if user is in allowedUsers for this community
+        const isAdminOrSuperuser = req.session.userRole === 'admin' || req.session.userRole === 'superuser';
+        const isAllowedUser = communityData.allowedUsers && communityData.allowedUsers.includes(req.session.username);
+
+        if (!isAdminOrSuperuser && !isAllowedUser) {
+            return res.status(403).json({ error: 'You do not have permission to activate pairing mode for this community.' });
+        }
+
+        const success = await sendCommandToRoblox('pairing_mode', community, address);
+
+        if (success) {
+            await logAccess(community, req.session.username, `Pairing mode activated (Address: ${address})`);
+            res.json({ message: 'Pairing mode activated successfully' });
+        } else {
+            res.json({ message: 'Pairing mode command sent' });
+        }
+    } catch (error) {
+        console.error('Error processing pairing-mode command:', error);
+        res.status(500).json({ error: 'Internal server error while activating pairing mode' });
+    }
+});
+
 // Route to get CSRF token
 app.get('/csrf-token', (req, res) => {
     res.json({ csrfToken: req.csrfToken() });
@@ -1073,48 +1115,22 @@ async function logAccess(communityName, playerName, action) {
  * @returns {Promise<boolean>} True if the command was sent successfully, false otherwise.
  */
 async function sendCommandToRoblox(command, community, address) {
-    if (!apiSecretKey) { // Changed from RESILIVE_API_KEY to apiSecretKey
-        console.error('Error: API_SECRET_KEY is not set. Cannot send command to Roblox.');
-        return false;
-    }
-
-    // Ensure VERCEL_URL is the base, and the path is /api/command as per subtask for the final endpoint.
-    // Assuming VERCEL_URL will be https://resilive-remote-controller.vercel.app in production.
-    const url = 'https://resilive-remote-controller.vercel.app/api/command'; // Statically set URL
+    // Write command to Firestore 'commands' collection
+    // The Pi gateway listens for new commands and executes them
     const payload = {
         command,
         community,
-        address, // Will be undefined if not provided, which is fine
+        address: address || null,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
     try {
-        console.log(`Sending command to Roblox: ${JSON.stringify(payload)} at ${url}`);
-        // Modified httpsAgent to use secureOptions as per subtask
-        const httpsAgent = new https.Agent({ 
-            secureOptions: crypto.constants.SSL_OP_NO_TLSv1 | crypto.constants.SSL_OP_NO_TLSv1_1 
-        });
-        const response = await axios.post(url, payload, {
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Api-Key': apiSecretKey, // Changed from RESILIVE_API_KEY to apiSecretKey
-            },
-            timeout: 10000, // 10 seconds timeout
-            httpsAgent: httpsAgent // Added httpsAgent to axios config
-        });
-
-        if (response.status === 200 && response.data && response.data.success) {
-            console.log('Command sent to Roblox successfully:', response.data);
-            return true;
-        } else {
-            console.log('Command sent to Roblox successfully:', response.data);
-            return true;
-        }
+        console.log(`Sending command via Firestore: ${JSON.stringify({ command, community, address })}`);
+        await db.collection('commands').add(payload);
+        console.log('Command written to Firestore successfully');
+        return true;
     } catch (error) {
-        console.error('Error sending command to Roblox:', error.message);
-        if (error.response) {
-            console.error('Error response data:', error.response.data);
-            console.error('Error response status:', error.response.status);
-        }
+        console.error('Error writing command to Firestore:', error.message);
         return false;
     }
 }
