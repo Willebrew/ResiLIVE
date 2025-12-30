@@ -41,10 +41,29 @@ const collections = {
     accessLogs: db.collection('access_logs')
 };
 
-// Rate limiter setup: maximum of 100 requests per 15 minutes
-const limiter = RateLimit({
+// Rate limiter configurations
+const generalLimiter = RateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // max 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const strictLimiter = RateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // max 5 attempts per windowMs
+    message: 'Too many attempts, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const apiLimiter = RateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 30, // max 30 requests per minute
+    message: 'API rate limit exceeded.',
+    standardHeaders: true,
+    legacyHeaders: false,
 });
 
 app.set('trust proxy', 1);
@@ -65,18 +84,11 @@ app.use(express.static('public', {
 
 // Add cookie-session configuration
 const sessionSecret = process.env.SESSION_SECRET;
-const placeholderSecret = 'super-secret-key-please-change-this-silly';
 
-if (process.env.NODE_ENV === 'production') {
-    if (!sessionSecret || sessionSecret === placeholderSecret) {
-        console.error('FATAL ERROR: SESSION_SECRET is not defined or is set to the placeholder in production. Please set a strong, unique secret in your .env file.');
-        process.exit(1); // Exit the application
-    }
-} else {
-    // In development, if SESSION_SECRET is not set, use the placeholder and log a warning
-    if (!sessionSecret) {
-        console.warn('WARNING: SESSION_SECRET is not set. Using a placeholder secret for development. Set SESSION_SECRET in your .env file for better security.');
-    }
+if (!sessionSecret) {
+    console.error('FATAL ERROR: SESSION_SECRET is not defined. Please set a strong, unique secret in your .env file.');
+    console.error('Generate one using: node -e "console.log(require(\'crypto\').randomBytes(64).toString(\'hex\'))"');
+    process.exit(1);
 }
 
 // API_SECRET_KEY configuration and validation
@@ -102,17 +114,21 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use(cookieSession({
     name: 'session',
-    keys: [sessionSecret || placeholderSecret],
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    keys: [sessionSecret],
+    maxAge: 30 * 60 * 1000, // 30 minutes
+    rolling: true, // Reset maxAge on every response
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'lax'
+    sameSite: 'strict' // Changed from 'lax' to 'strict' for better security
 }));
 
 // Security Headers Middleware
 app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
     
     const nonce = crypto.randomBytes(16).toString('base64');
     res.locals.nonce = nonce; // Make nonce available for templates if needed
@@ -131,15 +147,81 @@ app.use((req, res, next) => {
     res.setHeader('Content-Security-Policy', cspDirectives.join('; '));
 
     if (process.env.NODE_ENV === 'production') {
-        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
     }
     next();
 });
 
+// CORS Configuration
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:3000'];
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' ? process.env.CLIENT_ORIGIN_URL : 'http://localhost:3000',
-    credentials: true
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    optionsSuccessStatus: 200
 }));
+
+// Input Validation Utilities
+const validators = {
+    username: (value) => {
+        if (typeof value !== 'string') return false;
+        return /^[a-zA-Z0-9_]{3,20}$/.test(value);
+    },
+    password: (value) => {
+        if (typeof value !== 'string') return false;
+        // Minimum 12 characters, at least one uppercase, one lowercase, one number, one special char
+        return value.length >= 12 &&
+               /[A-Z]/.test(value) &&
+               /[a-z]/.test(value) &&
+               /[0-9]/.test(value) &&
+               /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value);
+    },
+    communityName: (value) => {
+        if (typeof value !== 'string') return false;
+        return /^[a-zA-Z0-9\s\-]{3,50}$/.test(value.trim());
+    },
+    streetAddress: (value) => {
+        if (typeof value !== 'string') return false;
+        return value.trim().length >= 3 && value.trim().length <= 100;
+    },
+    playerId: (value) => {
+        if (typeof value !== 'string') return false;
+        return /^[a-zA-Z0-9\-_]{1,50}$/.test(value);
+    },
+    accessCode: (value) => {
+        if (typeof value !== 'string') return false;
+        return /^[0-9]{4,8}$/.test(value);
+    },
+    description: (value) => {
+        if (typeof value !== 'string') return false;
+        return value.trim().length >= 1 && value.trim().length <= 200;
+    }
+};
+
+// Sanitization function to prevent XSS
+const sanitizeInput = (input) => {
+    if (typeof input !== 'string') return input;
+    return input.replace(/[<>\"']/g, (char) => {
+        const entities = {
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#x27;'
+        };
+        return entities[char];
+    });
+};
+
+// Apply rate limiting to all API routes
+app.use('/api', apiLimiter);
 
 // Apply CSRF protection to all other routes
 app.use((req, res, next) => {
@@ -194,13 +276,15 @@ app.put('/api/communities/:communityId/name', requireAuth, requireAdmin, async (
         const { name } = req.body;
 
         // Validation for name
-        if (!name || typeof name !== 'string' || name.trim() === '') {
-            return res.status(400).json({ error: 'New name is required and must be a non-empty string.' });
+        if (!validators.communityName(name)) {
+            return res.status(400).json({ 
+                error: 'Invalid community name. Must be 3-50 characters, alphanumeric, spaces, and hyphens only.' 
+            });
         }
 
         // Check for duplicate name (excluding the current community if its name isn't changing)
         const communitiesRef = db.collection('communities');
-        const snapshot = await communitiesRef.where('name', '==', name).get();
+        const snapshot = await communitiesRef.where('name', '==', name.trim()).get();
         
         let duplicateExists = false;
         if (!snapshot.empty) {
@@ -349,40 +433,10 @@ app.get('/csrf-token', (req, res) => {
 });
 
 /**
- * Creates an initial superuser account if one does not already exist.
- * The superuser account has the username 'superuser' and the password 'root'.
- * @returns {Promise<void>}
+ * SECURITY: Initial superuser creation has been removed.
+ * To create an initial admin user, use the secure setup script or admin CLI tool.
+ * Never use hardcoded credentials in production.
  */
-async function createInitialSuperuser() {
-    try {
-        // Check if superuser already exists
-        const superuserSnapshot = await db.collection('users')
-            .where('role', '==', 'superuser')
-            .get();
-
-        if (!superuserSnapshot.empty) {
-            console.log('Superuser already exists');
-            return;
-        }
-
-        // Create superuser
-        const hashedPassword = await bcrypt.hash('root', 10);
-        const superuser = {
-            username: 'superuser',
-            password: hashedPassword,
-            role: 'superuser',
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        };
-
-        await db.collection('users').add(superuser);
-        console.log('Initial superuser created successfully');
-    } catch (error) {
-        console.error('Error creating initial superuser:', error);
-    }
-}
-
-// Uncomment createInitialSuperuser(); to create initial superuser, then comment out again
-// createInitialSuperuser();
 
 /**
  * Reads data from a specified file.
@@ -494,6 +548,20 @@ function requireApiKey(req, res, next) {
 app.post('/api/register', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { username, password } = req.body;
+        
+        // Input validation
+        if (!validators.username(username)) {
+            return res.status(400).json({ 
+                error: 'Invalid username. Must be 3-20 characters, alphanumeric and underscores only.' 
+            });
+        }
+        
+        if (!validators.password(password)) {
+            return res.status(400).json({ 
+                error: 'Password must be at least 12 characters with uppercase, lowercase, number, and special character.' 
+            });
+        }
+        
         const usersRef = db.collection('users');
 
         const existingUser = await usersRef
@@ -506,10 +574,11 @@ app.post('/api/register', requireAuth, requireAdmin, async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = {
-            id: Date.now().toString(),
-            username,
+            id: crypto.randomBytes(16).toString('hex'),
+            username: sanitizeInput(username),
             password: hashedPassword,
-            role: 'user'
+            role: 'user',
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
         };
 
         await usersRef.doc(newUser.id).set(newUser);
@@ -555,13 +624,24 @@ async function removeCommunityFromAccessLogs(communityName) {
 }
 
 // Route to log in a user
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', strictLimiter, async (req, res) => {
     try {
         const { username, password } = req.body;
+        
+        // Input validation
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password are required' });
+        }
+        
+        if (typeof username !== 'string' || typeof password !== 'string') {
+            return res.status(400).json({ error: 'Invalid input format' });
+        }
+        
         const usersRef = db.collection('users');
         const snapshot = await usersRef.where('username', '==', username).get();
 
         if (snapshot.empty) {
+            // Use same error message to prevent username enumeration
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
@@ -601,18 +681,36 @@ app.post('/api/logout', (req, res) => {
 // Route to add a new community
 app.post('/api/communities', requireAuth, requireAdmin, async (req, res) => {
     try {
+        const { name } = req.body;
+        
+        // Input validation
+        if (!validators.communityName(name)) {
+            return res.status(400).json({ 
+                error: 'Invalid community name. Must be 3-50 characters, alphanumeric, spaces, and hyphens only.' 
+            });
+        }
+        
         // Get all communities to check count
         const snapshot = await db.collection('communities').get();
         if (snapshot.size >= 8) {
             return res.status(400).json({ error: 'Maximum number of communities (8) reached' });
         }
+        
+        // Check for duplicate names
+        const duplicateCheck = await db.collection('communities')
+            .where('name', '==', name.trim())
+            .get();
+        
+        if (!duplicateCheck.empty) {
+            return res.status(409).json({ error: 'A community with this name already exists' });
+        }
 
         // Create new community
         const newCommunity = {
-            name: req.body.name,
+            name: sanitizeInput(name.trim()),
             addresses: [],
             allowedUsers: req.body.allowedUsers || [],
-            remoteGateControlEnabled: false, // Added field with default value
+            remoteGateControlEnabled: false,
             createdAt: admin.firestore.FieldValue.serverTimestamp()
         };
 
@@ -751,6 +849,19 @@ app.get('/api/users', requireAuth, requireAdmin, async (req, res) => {
 app.post('/api/users', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { username, password } = req.body;
+        
+        // Input validation
+        if (!validators.username(username)) {
+            return res.status(400).json({ 
+                error: 'Invalid username. Must be 3-20 characters, alphanumeric and underscores only.' 
+            });
+        }
+        
+        if (!validators.password(password)) {
+            return res.status(400).json({ 
+                error: 'Password must be at least 12 characters with uppercase, lowercase, number, and special character.' 
+            });
+        }
 
         const existingUser = await db.collection('users')
             .where('username', '==', username)
@@ -762,7 +873,7 @@ app.post('/api/users', requireAuth, requireAdmin, async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = {
-            username: username,
+            username: sanitizeInput(username),
             password: hashedPassword,
             role: 'user',
             createdAt: admin.firestore.FieldValue.serverTimestamp()
@@ -858,18 +969,45 @@ app.post('/api/admin/add-user', requireAuth, async (req, res) => {
     }
 });
 
-app.post('/api/change-password', requireAuth, async (req, res) => {
+app.post('/api/change-password', requireAuth, strictLimiter, async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
-        const users = await readData('users');
-        const user = users.users.find(u => u.id === req.session.userId);
+        
+        // Input validation
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: 'Current and new passwords are required' });
+        }
+        
+        if (!validators.password(newPassword)) {
+            return res.status(400).json({ 
+                error: 'New password must be at least 12 characters with uppercase, lowercase, number, and special character.' 
+            });
+        }
+        
+        // Prevent reusing the same password
+        if (currentPassword === newPassword) {
+            return res.status(400).json({ error: 'New password must be different from current password' });
+        }
+        
+        const userRef = db.collection('users').doc(req.session.userId);
+        const userDoc = await userRef.get();
+        
+        if (!userDoc.exists) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        const userData = userDoc.data();
 
-        if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+        if (!(await bcrypt.compare(currentPassword, userData.password))) {
             return res.status(401).json({ error: 'Current password is incorrect' });
         }
 
-        user.password = await bcrypt.hash(newPassword, 10);
-        await writeData('users', users);
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await userRef.update({ 
+            password: hashedPassword,
+            passwordChangedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        
         res.json({ message: 'Password changed successfully' });
     } catch (error) {
         errorHandler(res, error, 'Error changing password');
@@ -1115,8 +1253,7 @@ async function logAccess(communityName, playerName, action) {
  * @returns {Promise<boolean>} True if the command was sent successfully, false otherwise.
  */
 async function sendCommandToRoblox(command, community, address) {
-    // Write command to Firestore 'commands' collection
-    // The Pi gateway listens for new commands and executes them
+    // Write command to Firestore - Pi listens in real-time
     const payload = {
         command,
         community,
@@ -1126,11 +1263,25 @@ async function sendCommandToRoblox(command, community, address) {
 
     try {
         console.log(`Sending command via Firestore: ${JSON.stringify({ command, community, address })}`);
-        await db.collection('commands').add(payload);
-        console.log('Command written to Firestore successfully');
+        const docRef = await db.collection('commands').add(payload);
+        console.log(`Command written to Firestore with ID: ${docRef.id}`);
+
+        // Auto-cleanup: delete command after 30 seconds (gives Pi time to process)
+        setTimeout(async () => {
+            try {
+                await docRef.delete();
+                console.log(`Auto-deleted command ${docRef.id} after 30s`);
+            } catch (err) {
+                // Command may already be deleted by Pi - that's fine
+                if (err.code !== 5) { // 5 = NOT_FOUND
+                    console.error(`Failed to auto-delete command ${docRef.id}:`, err.message);
+                }
+            }
+        }, 30000);
+
         return true;
     } catch (error) {
-        console.error('Error writing command to Firestore:', error.message);
+        console.error('Error sending command to Firestore:', error.message);
         return false;
     }
 }

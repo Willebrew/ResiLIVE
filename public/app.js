@@ -1502,9 +1502,9 @@ async function openAddressGate(communityName, streetAddress) {
 }
 
 /**
- * Activates pairing mode for a specific address (10 second relay hold).
+ * Activates pairing mode for an address (10 second relay hold for RFID pairing).
  * @param {string} communityName - The name of the community.
- * @param {string} streetAddress - The street address for which to activate pairing mode.
+ * @param {string} streetAddress - The street address for pairing mode.
  */
 async function activatePairingMode(communityName, streetAddress) {
     if (!communityName || !streetAddress) {
