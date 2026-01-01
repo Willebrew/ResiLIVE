@@ -1599,7 +1599,7 @@ app.put('/api/user/theme', requireAuth, async (req, res) => {
 });
 
 // Route to serve the main API data file
-app.get('/api', limiter, requireApiKey, async (req, res) => {
+app.get('/api', generalLimiter, requireApiKey, async (req, res) => {
     try {
         const snapshot = await db.collection('communities').get();
         const communities = snapshot.docs.map(doc => ({
@@ -1615,7 +1615,7 @@ app.get('/api', limiter, requireApiKey, async (req, res) => {
 });
 
 // Route to serve the login page
-app.get('/', limiter, (req, res) => {
+app.get('/', generalLimiter, (req, res) => {
     if (!req.session.userId) {
         return res.redirect('/login.html');
     }
@@ -1623,12 +1623,12 @@ app.get('/', limiter, (req, res) => {
 });
 
 // Route to serve the login page
-app.get('/login.html', limiter, (req, res) => {
+app.get('/login.html', generalLimiter, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
 // Route to serve the index page
-app.get('/index.html', limiter, (req, res) => {
+app.get('/index.html', generalLimiter, (req, res) => {
     if (!req.session.userId) {
         return res.redirect('/login.html');
     }
