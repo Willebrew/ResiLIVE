@@ -1305,10 +1305,13 @@ function renderDiagnostics(d) {
     `;
 
     // If transitioning from skeleton/offline, fade in the new content
+    container.innerHTML = cardsHtml;
     if (needsTransition) {
-        container.innerHTML = `<div class="diag-fadein">${cardsHtml}</div>`;
-    } else {
-        container.innerHTML = cardsHtml;
+        container.classList.add('diag-fadein');
+        // Remove class after animation so it doesn't replay on next update
+        container.addEventListener('animationend', () => {
+            container.classList.remove('diag-fadein');
+        }, { once: true });
     }
 
     // Set bar widths via JS to avoid CSP inline style violations

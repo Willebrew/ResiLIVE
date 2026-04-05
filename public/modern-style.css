@@ -2083,9 +2083,10 @@ main.transitioning {
 .log-skeleton-bar {
     height: 12px;
     border-radius: 6px;
-    background: linear-gradient(90deg, var(--color-border, #222) 0%, var(--color-border, #222) 35%, var(--color-surface-hover, #2a2a2a) 50%, var(--color-border, #222) 65%, var(--color-border, #222) 100%);
-    background-size: 1200px 100%;
-    animation: skeleton-shimmer 1.8s linear infinite;
+    background: linear-gradient(90deg, var(--color-border, #222) 0%, var(--color-border, #222) 35%, var(--color-surface-hover, #2a2a2a) 50%, var(--color-border, #222) 65%, var(--color-border, #222) 100%) !important;
+    background-size: 1200px 100% !important;
+    animation: skeleton-shimmer 1.8s linear infinite !important;
+    transition: none !important;
 }
 .log-skeleton-bar.sk-time { width: 80px; flex-shrink: 0; }
 .log-skeleton-bar.sk-name { width: 100px; flex-shrink: 0; }
@@ -2093,11 +2094,12 @@ main.transitioning {
 
 /* Diagnostics skeleton loading */
 .diag-skeleton-card {
-    background: linear-gradient(90deg, var(--color-border, #222) 0%, var(--color-border, #222) 35%, var(--color-surface-hover, #2a2a2a) 50%, var(--color-border, #222) 65%, var(--color-border, #222) 100%);
-    background-size: 1200px 100%;
-    animation: skeleton-shimmer 1.8s linear infinite;
+    background: linear-gradient(90deg, var(--color-border, #222) 0%, var(--color-border, #222) 35%, var(--color-surface-hover, #2a2a2a) 50%, var(--color-border, #222) 65%, var(--color-border, #222) 100%) !important;
+    background-size: 1200px 100% !important;
+    animation: skeleton-shimmer 1.8s linear infinite !important;
     border-radius: 10px;
     height: 80px;
+    transition: none !important;
 }
 .diag-skeleton-wide {
     height: 110px;
