@@ -282,6 +282,18 @@ function setupUIEventListeners() {
         showUsersBtn.addEventListener('click', showUsersPopup);
     }
 
+    // Hook up Show Diagnostics button
+    const showDiagnosticsBtn = document.getElementById('showDiagnosticsBtn');
+    if (showDiagnosticsBtn) {
+        showDiagnosticsBtn.addEventListener('click', () => {
+            showDiagnostics(selectedCommunity ? selectedCommunity.name : '');
+        });
+    }
+    const closeDiagnosticsBtn = document.getElementById('closeDiagnosticsPopupBtn');
+    if (closeDiagnosticsBtn) {
+        closeDiagnosticsBtn.addEventListener('click', closeDiagnostics);
+    }
+
     // Hook up Add Address button
     const addAddressBtn = document.getElementById('addAddressBtn');
     if (addAddressBtn) {
@@ -1063,6 +1075,202 @@ function closeLogPopup() {
 function closeUsersPopup() {
     const usersPopupEl = document.getElementById('usersPopup');
     if (usersPopupEl) usersPopupEl.classList.remove('popup-visible'); // CSP Refactor
+}
+
+// ── Gateway Diagnostics ─────────────────────────────────────────────────────
+
+function showDiagnostics(communityName) {
+    if (!communityName) {
+        alert('No community selected');
+        return;
+    }
+    if (window.diagUpdateInterval) clearInterval(window.diagUpdateInterval);
+
+    const popup = document.getElementById('diagnosticsPopup');
+    const title = document.getElementById('diagnosticsPopupTitle');
+    if (title) title.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+        </svg>
+        ${communityName} — Gateway Diagnostics`;
+    if (popup) popup.classList.add('popup-visible');
+    updateDiagnostics(communityName);
+
+    window.diagUpdateInterval = setInterval(() => {
+        const el = document.getElementById('diagnosticsPopup');
+        if (el && el.classList.contains('popup-visible')) {
+            updateDiagnostics(communityName);
+        } else {
+            if (window.diagUpdateInterval) clearInterval(window.diagUpdateInterval);
+        }
+    }, 5000);
+}
+
+function closeDiagnostics() {
+    if (window.diagUpdateInterval) clearInterval(window.diagUpdateInterval);
+    const popup = document.getElementById('diagnosticsPopup');
+    if (popup) popup.classList.remove('popup-visible');
+}
+
+async function updateDiagnostics(communityName) {
+    try {
+        const res = await fetch(`/api/communities/${encodeURIComponent(communityName)}/diagnostics`);
+        if (res.ok) {
+            const data = await res.json();
+            renderDiagnostics(data);
+        }
+    } catch (err) {
+        console.error('Error fetching diagnostics:', err);
+    }
+}
+
+function renderDiagnostics(d) {
+    const container = document.getElementById('diagnosticsContent');
+    if (!container) return;
+
+    if (!d.online && !d.uptime) {
+        container.innerHTML = `
+            <div class="diag-offline-notice">
+                <svg width="48" height="48" viewBox="0 0 20 20" fill="currentColor" opacity="0.3">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <p>No gateway connected to this community</p>
+                <span>The gateway device has not sent a heartbeat yet.</span>
+            </div>`;
+        return;
+    }
+
+    const online = d.online;
+    const statusClass = online ? 'diag-status-online' : 'diag-status-offline';
+    const statusText = online ? 'Online' : 'Offline';
+    const statusDot = online ? 'diag-dot-online' : 'diag-dot-offline';
+
+    const uptimeStr = d.uptime || '—';
+    const cpuPct = d.cpu != null ? d.cpu : null;
+    const memUsed = d.memUsedMb != null ? d.memUsedMb : null;
+    const memTotal = d.memTotalMb != null ? d.memTotalMb : null;
+    const memPct = (memUsed != null && memTotal) ? Math.round((memUsed / memTotal) * 100) : null;
+    const diskUsed = d.diskUsedGb != null ? d.diskUsedGb : null;
+    const diskTotal = d.diskTotalGb != null ? d.diskTotalGb : null;
+    const diskPct = d.diskPct != null ? d.diskPct : null;
+    const wifiSignal = d.wifiSignalDbm != null ? d.wifiSignalDbm : null;
+    const wifiSsid = d.wifiSsid || '';
+    const lastTag = d.lastTag || null;
+    const lastTagTime = d.lastTagTime || null;
+    const lastTagStatus = d.lastTagStatus || '';
+    const firestoreStatus = d.firestoreConnected ? 'Connected' : 'Disconnected';
+    const firestoreClass = d.firestoreConnected ? 'diag-val-good' : 'diag-val-bad';
+    const pendingLogs = d.pendingLogs != null ? d.pendingLogs : '—';
+    const pendingClass = (d.pendingLogs > 0) ? 'diag-val-warn' : 'diag-val-good';
+    const serialStatus = d.serialConnected ? 'Connected' : 'Disconnected';
+    const serialClass = d.serialConnected ? 'diag-val-good' : 'diag-val-bad';
+    const hostname = d.hostname || '—';
+    const ip = d.ip || '—';
+
+    // WiFi signal quality mapping
+    let wifiQuality = '—';
+    let wifiClass = 'diag-val-good';
+    let wifiBars = 0;
+    if (wifiSignal != null) {
+        if (wifiSignal >= -50) { wifiQuality = 'Excellent'; wifiBars = 4; wifiClass = 'diag-val-good'; }
+        else if (wifiSignal >= -60) { wifiQuality = 'Good'; wifiBars = 3; wifiClass = 'diag-val-good'; }
+        else if (wifiSignal >= -70) { wifiQuality = 'Fair'; wifiBars = 2; wifiClass = 'diag-val-warn'; }
+        else { wifiQuality = 'Weak'; wifiBars = 1; wifiClass = 'diag-val-bad'; }
+    }
+
+    // CPU color
+    let cpuClass = 'diag-val-good';
+    if (cpuPct != null) {
+        if (cpuPct > 80) cpuClass = 'diag-val-bad';
+        else if (cpuPct > 50) cpuClass = 'diag-val-warn';
+    }
+
+    // Memory color
+    let memClass = 'diag-val-good';
+    if (memPct != null) {
+        if (memPct > 85) memClass = 'diag-val-bad';
+        else if (memPct > 65) memClass = 'diag-val-warn';
+    }
+
+    // Last tag time formatting
+    let lastTagTimeStr = '—';
+    if (lastTagTime) {
+        const ago = Math.round((Date.now() - lastTagTime) / 1000);
+        if (ago < 60) lastTagTimeStr = `${ago}s ago`;
+        else if (ago < 3600) lastTagTimeStr = `${Math.floor(ago / 60)}m ago`;
+        else lastTagTimeStr = `${Math.floor(ago / 3600)}h ago`;
+    }
+
+    const lastTagStatusClass = lastTagStatus === 'granted' ? 'diag-tag-granted' : (lastTagStatus === 'denied' ? 'diag-tag-denied' : '');
+
+    container.innerHTML = `
+        <div class="diag-card diag-card-status ${statusClass}">
+            <div class="diag-card-icon">
+                <span class="diag-dot ${statusDot}"></span>
+            </div>
+            <div class="diag-card-body">
+                <span class="diag-card-label">Gateway Status</span>
+                <span class="diag-card-value">${statusText}</span>
+                <span class="diag-card-sub">${hostname} &bull; ${ip}</span>
+            </div>
+            <div class="diag-card-extra">
+                <span class="diag-card-label">Uptime</span>
+                <span class="diag-card-value-sm">${uptimeStr}</span>
+            </div>
+        </div>
+
+        <div class="diag-row">
+            <div class="diag-card diag-card-sm">
+                <span class="diag-card-label">CPU</span>
+                <span class="diag-card-value ${cpuClass}">${cpuPct != null ? cpuPct + '%' : '—'}</span>
+                <div class="diag-bar"><div class="diag-bar-fill ${cpuClass}" style="width:${cpuPct || 0}%"></div></div>
+            </div>
+            <div class="diag-card diag-card-sm">
+                <span class="diag-card-label">Memory</span>
+                <span class="diag-card-value ${memClass}">${memPct != null ? memPct + '%' : '—'}</span>
+                <div class="diag-bar"><div class="diag-bar-fill ${memClass}" style="width:${memPct || 0}%"></div></div>
+                <span class="diag-card-sub">${memUsed != null ? memUsed + ' / ' + memTotal + ' MB' : ''}</span>
+            </div>
+            <div class="diag-card diag-card-sm">
+                <span class="diag-card-label">Disk</span>
+                <span class="diag-card-value">${diskPct != null ? diskPct + '%' : '—'}</span>
+                <div class="diag-bar"><div class="diag-bar-fill" style="width:${diskPct || 0}%"></div></div>
+                <span class="diag-card-sub">${diskUsed != null ? diskUsed + ' / ' + diskTotal + ' GB' : ''}</span>
+            </div>
+        </div>
+
+        <div class="diag-row">
+            <div class="diag-card diag-card-sm">
+                <span class="diag-card-label">WiFi</span>
+                <div class="diag-wifi-bars">
+                    ${[1,2,3,4].map(i => `<span class="diag-wifi-bar ${i <= wifiBars ? 'diag-wifi-active' : ''}"></span>`).join('')}
+                </div>
+                <span class="diag-card-value-sm ${wifiClass}">${wifiQuality}</span>
+                <span class="diag-card-sub">${wifiSsid}${wifiSignal != null ? ' (' + wifiSignal + ' dBm)' : ''}</span>
+            </div>
+            <div class="diag-card diag-card-sm">
+                <span class="diag-card-label">Firestore</span>
+                <span class="diag-card-value-sm ${firestoreClass}">${firestoreStatus}</span>
+            </div>
+            <div class="diag-card diag-card-sm">
+                <span class="diag-card-label">Serial Port</span>
+                <span class="diag-card-value-sm ${serialClass}">${serialStatus}</span>
+            </div>
+        </div>
+
+        <div class="diag-row">
+            <div class="diag-card diag-card-sm">
+                <span class="diag-card-label">Pending Logs</span>
+                <span class="diag-card-value ${pendingClass}">${pendingLogs}</span>
+                <span class="diag-card-sub">Queued for retry</span>
+            </div>
+            <div class="diag-card diag-card-wide">
+                <span class="diag-card-label">Last Tag Read</span>
+                <span class="diag-card-value-sm ${lastTagStatusClass}">${lastTag || '—'}</span>
+                <span class="diag-card-sub">${lastTagTimeStr}${lastTagStatus ? ' &bull; ' + lastTagStatus : ''}</span>
+            </div>
+        </div>
+    `;
 }
 
 /**

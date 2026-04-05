@@ -46,6 +46,14 @@ const ThemeManager = {
                 settingsDropdown.classList.add('hidden');
                 document.getElementById('showLogsBtn').click();
             });
+
+            const diagBtn = document.getElementById('settingsDiagnosticsBtn');
+            if (diagBtn) {
+                diagBtn.addEventListener('click', () => {
+                    settingsDropdown.classList.add('hidden');
+                    document.getElementById('showDiagnosticsBtn').click();
+                });
+            }
             
             // Close dropdown when clicking outside
             document.addEventListener('click', () => {

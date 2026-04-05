@@ -1318,6 +1318,224 @@ button.address-open-gate-btn.loading::after {
 
 .community-action-menu-positioned {
     position: absolute;
-    z-index: 100; 
+    z-index: 100;
     /* top, left will be set by JS if still needed, or handled by more specific positioning logic if possible */
+}
+
+/********************************************************
+  DIAGNOSTICS PANEL
+*********************************************************/
+
+.diagnostics-content {
+    max-width: 640px;
+}
+
+.diagnostics-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.diagnostics-loading {
+    text-align: center;
+    color: var(--color-text-secondary, #888);
+    padding: 40px 0;
+}
+
+/* Offline notice */
+.diag-offline-notice {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--color-text-secondary, #888);
+}
+.diag-offline-notice svg {
+    margin-bottom: 12px;
+    color: var(--color-text-secondary, #888);
+}
+.diag-offline-notice p {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    color: var(--color-text, #fff);
+}
+.diag-offline-notice span {
+    font-size: 0.85rem;
+}
+
+/* Status card (full width) */
+.diag-card {
+    background: var(--color-bg, #111);
+    border: 1px solid var(--color-border, #333);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.diag-card-status {
+    border-left: 3px solid transparent;
+}
+.diag-card-status.diag-status-online {
+    border-left-color: #22c55e;
+}
+.diag-card-status.diag-status-offline {
+    border-left-color: #ef4444;
+}
+
+.diag-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+}
+
+.diag-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.diag-dot-online {
+    background: #22c55e;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+    animation: diag-pulse 2s ease-in-out infinite;
+}
+.diag-dot-offline {
+    background: #ef4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
+@keyframes diag-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.diag-card-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.diag-card-extra {
+    text-align: right;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.diag-card-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary, #888);
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.diag-card-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--color-text, #fff);
+    line-height: 1.2;
+}
+
+.diag-card-value-sm {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text, #fff);
+}
+
+.diag-card-sub {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary, #888);
+    margin-top: 2px;
+}
+
+/* Row of small cards */
+.diag-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.diag-card-sm {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 12px 14px;
+}
+
+.diag-card-wide {
+    grid-column: span 2;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 12px 14px;
+}
+
+/* Progress bars */
+.diag-bar {
+    width: 100%;
+    height: 4px;
+    background: var(--color-border, #333);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+.diag-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--color-primary, #3b82f6);
+    transition: width 0.5s ease;
+}
+
+/* Value colors */
+.diag-val-good { color: #22c55e !important; }
+.diag-val-warn { color: #f59e0b !important; }
+.diag-val-bad { color: #ef4444 !important; }
+
+/* Bar fill colors */
+.diag-bar-fill.diag-val-good { background: #22c55e; }
+.diag-bar-fill.diag-val-warn { background: #f59e0b; }
+.diag-bar-fill.diag-val-bad { background: #ef4444; }
+
+/* WiFi bars */
+.diag-wifi-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 20px;
+    margin: 4px 0;
+}
+.diag-wifi-bar {
+    width: 5px;
+    border-radius: 1px;
+    background: var(--color-border, #333);
+    transition: background 0.3s;
+}
+.diag-wifi-bar:nth-child(1) { height: 5px; }
+.diag-wifi-bar:nth-child(2) { height: 10px; }
+.diag-wifi-bar:nth-child(3) { height: 15px; }
+.diag-wifi-bar:nth-child(4) { height: 20px; }
+.diag-wifi-bar.diag-wifi-active { background: #22c55e; }
+
+/* Tag status badges */
+.diag-tag-granted { color: #22c55e !important; }
+.diag-tag-denied { color: #ef4444 !important; }
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+    .diag-row {
+        grid-template-columns: 1fr 1fr;
+    }
+    .diag-card-wide {
+        grid-column: span 2;
+    }
+    .diagnostics-content {
+        max-width: 100%;
+    }
 }

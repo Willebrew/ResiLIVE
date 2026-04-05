@@ -17,6 +17,7 @@ const app = express();
 const port = 3000;
 const cors = require('cors');
 const lastAccessTimes = {};
+const gatewayHeartbeats = {};  // In-memory store: { communityName: { ...heartbeatData, receivedAt } }
 
 // VERCEL_URL constant
 const VERCEL_URL = process.env.VERCEL_URL || 'http://localhost:3000';
@@ -1633,6 +1634,50 @@ app.get('/index.html', generalLimiter, (req, res) => {
         return res.redirect('/login.html');
     }
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// ── Gateway Diagnostics ─────────────────────────────────────────────────────
+
+/**
+ * Receive heartbeat from a gateway device (Pi).
+ * The gateway POSTs system stats every 30s. Stored in memory keyed by community name.
+ */
+app.post('/api/gateway/heartbeat', requireApiKey, (req, res) => {
+    const { community } = req.body;
+    if (!community) {
+        return res.status(400).json({ error: 'Missing community field' });
+    }
+    gatewayHeartbeats[community] = {
+        ...req.body,
+        receivedAt: Date.now(),
+    };
+    res.status(200).json({ message: 'Heartbeat received' });
+});
+
+/**
+ * Get live diagnostics for a community's gateway.
+ * Returns the latest heartbeat data + online/offline status.
+ */
+app.get('/api/communities/:name/diagnostics', requireAuth, (req, res) => {
+    const communityName = req.params.name;
+    const heartbeat = gatewayHeartbeats[communityName];
+
+    if (!heartbeat) {
+        return res.json({
+            online: false,
+            message: 'No gateway heartbeat received for this community',
+        });
+    }
+
+    const ageMs = Date.now() - heartbeat.receivedAt;
+    const online = ageMs < 90000; // Consider offline if no heartbeat in 90s
+
+    res.json({
+        online,
+        lastSeen: heartbeat.receivedAt,
+        ageSeconds: Math.round(ageMs / 1000),
+        ...heartbeat,
+    });
 });
 
 // Start the server
