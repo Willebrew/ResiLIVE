@@ -1,4 +1,23 @@
 /********************************************************
+  PREVENT ZOOM ON INPUT FOCUS & DOUBLE-TAP
+*********************************************************/
+input, select, textarea, button {
+    font-size: 16px !important;
+}
+* {
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+}
+html, body {
+    touch-action: pan-x pan-y;
+    height: 100%;
+    overflow-x: hidden;
+    position: fixed;
+    width: 100%;
+}
+
+/********************************************************
   COLOR & THEME VARIABLES
 *********************************************************/
 :root {
