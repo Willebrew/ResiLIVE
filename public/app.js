@@ -1280,6 +1280,15 @@ function renderDiagnostics(d) {
  * @param {string} communityName - The name of the community.
  */
 async function updateLogs(communityName) {
+    const logContent = document.getElementById('logContent');
+    // Show skeletons only on first load (when empty)
+    if (logContent && logContent.children.length === 0) {
+        let skeletonHtml = '';
+        for (let i = 0; i < 8; i++) {
+            skeletonHtml += '<div class="log-skeleton"><span class="log-skeleton-bar sk-time"></span><span class="log-skeleton-bar sk-name"></span><span class="log-skeleton-bar sk-action"></span></div>';
+        }
+        logContent.innerHTML = skeletonHtml;
+    }
     try {
         const response = await fetch(`/api/communities/${encodeURIComponent(communityName)}/logs`);
         if (response.ok) {
@@ -1304,9 +1313,10 @@ function displayLogs(logs) {
     // Sort logs descending by timestamp
     logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    logs.forEach(log => {
+    logs.forEach((log, idx) => {
         const logEntry = document.createElement('div');
-        logEntry.className = 'log-entry';
+        logEntry.className = 'log-entry log-entry-fadein';
+        logEntry.style.animationDelay = (idx * 30) + 'ms';
         
         // Format timestamp more compactly
         const date = new Date(log.timestamp);

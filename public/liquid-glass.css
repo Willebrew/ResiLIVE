@@ -77,7 +77,7 @@
     backdrop-filter: var(--liquid-blur);
     -webkit-backdrop-filter: var(--liquid-blur);
     border: 1px solid var(--liquid-border);
-    box-shadow: var(--liquid-shadow);
+    box-shadow: none;
 }
 
 /* Settings dropdown */
@@ -86,7 +86,7 @@
     backdrop-filter: var(--liquid-blur);
     -webkit-backdrop-filter: var(--liquid-blur);
     border: 1px solid var(--liquid-border);
-    box-shadow: var(--liquid-shadow);
+    box-shadow: none;
 }
 
 /* Theme dropdown */
@@ -95,7 +95,7 @@
     backdrop-filter: var(--liquid-blur);
     -webkit-backdrop-filter: var(--liquid-blur);
     border: 1px solid var(--liquid-border);
-    box-shadow: var(--liquid-shadow);
+    box-shadow: none;
 }
 
 /* Community action menu */
@@ -104,7 +104,7 @@
     backdrop-filter: var(--liquid-blur);
     -webkit-backdrop-filter: var(--liquid-blur);
     border: 1px solid var(--liquid-border);
-    box-shadow: var(--liquid-shadow);
+    box-shadow: none;
 }
 
 /* Search results dropdown */
@@ -121,7 +121,7 @@
     backdrop-filter: var(--liquid-blur);
     -webkit-backdrop-filter: var(--liquid-blur);
     border: 1px solid var(--liquid-border);
-    box-shadow: var(--liquid-shadow);
+    box-shadow: none;
 }
 
 /********************************************************
