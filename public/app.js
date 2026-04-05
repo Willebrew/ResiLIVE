@@ -1303,89 +1303,116 @@ async function updateLogs(communityName) {
 }
 
 /**
- * Displays logs in the UI.
- * @param {Array<Object>} logs - The logs to display.
+ * Creates a unique key for a log entry to enable diffing.
+ */
+function logEntryKey(log) {
+    return `${log.timestamp}|${log.player}|${log.action}`;
+}
+
+/**
+ * Builds a log entry DOM element.
+ */
+function createLogEntry(log, animate) {
+    const logEntry = document.createElement('div');
+    logEntry.className = 'log-entry' + (animate ? ' log-entry-fadein' : '');
+
+    // Format timestamp
+    const date = new Date(log.timestamp);
+    const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+    const dateOptions = { month: 'short', day: 'numeric' };
+    const time = date.toLocaleTimeString('en-US', timeOptions);
+    const dateStr = date.toLocaleDateString('en-US', dateOptions);
+    const timestamp = `${dateStr} ${time}`;
+
+    let actionClass = 'action-allowed';
+    if (log.action && typeof log.action === 'string' && log.action.toLowerCase().includes("denied")) {
+        actionClass = 'action-denied';
+        logEntry.classList.add('action-denied');
+    }
+
+    const actionText = (typeof log.action === 'string' || typeof log.action === 'number') ? String(log.action) : '(empty action)';
+    const isLongEntry = actionText.length > 60;
+    const isMobile = window.innerWidth <= 768;
+    const needsExpander = isLongEntry && !isMobile;
+
+    if (needsExpander) logEntry.classList.add('expandable');
+
+    const timestampSpan = document.createElement('span');
+    timestampSpan.className = 'timestamp';
+    timestampSpan.textContent = timestamp;
+
+    const playerSpan = document.createElement('span');
+    playerSpan.className = 'player';
+    playerSpan.textContent = log.player;
+
+    const actionSpan = document.createElement('span');
+    actionSpan.className = `action ${actionClass} ${isLongEntry ? 'truncated' : ''}`;
+    actionSpan.textContent = actionText;
+
+    logEntry.appendChild(timestampSpan);
+    logEntry.appendChild(playerSpan);
+    logEntry.appendChild(actionSpan);
+
+    if (needsExpander) {
+        const expandIndicator = document.createElement('span');
+        expandIndicator.className = 'expand-indicator';
+        expandIndicator.innerHTML = '<svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>';
+        logEntry.appendChild(expandIndicator);
+        logEntry.addEventListener('click', function() {
+            this.classList.toggle('expanded');
+        });
+    }
+
+    logEntry.dataset.logKey = logEntryKey(log);
+    return logEntry;
+}
+
+/**
+ * Displays logs in the UI. On first load, animates all entries with stagger.
+ * On refresh, only animates newly appeared entries at the top.
  */
 function displayLogs(logs) {
     const logContent = document.getElementById('logContent');
-    logContent.innerHTML = '';
 
     // Sort logs descending by timestamp
     logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    logs.forEach((log, idx) => {
-        const logEntry = document.createElement('div');
-        logEntry.className = 'log-entry log-entry-fadein';
-        logEntry.style.animationDelay = (idx * 30) + 'ms';
-        
-        // Format timestamp more compactly
-        const date = new Date(log.timestamp);
-        const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
-        const dateOptions = { month: 'short', day: 'numeric' };
-        const time = date.toLocaleTimeString('en-US', timeOptions);
-        const dateStr = date.toLocaleDateString('en-US', dateOptions);
-        const timestamp = `${dateStr} ${time}`;
-        
-        let actionClass = 'action-allowed'; // Default to allowed (green)
-        // Ensure log.action exists and is a string before calling toLowerCase()
-        if (log.action && typeof log.action === 'string' && log.action.toLowerCase().includes("denied")) {
-            actionClass = 'action-denied'; // Set to denied (red) if applicable
-            logEntry.classList.add('action-denied'); // Add class to entry for bar color
-        }
+    const isFirstLoad = !logContent.querySelector('.log-entry');
 
-        // Ensure log.action is a string for safe display in innerHTML; display number as is.
-        const actionText = (typeof log.action === 'string' || typeof log.action === 'number') ? String(log.action) : '(empty action)';
-        
-        // Escape HTML to prevent XSS and preserve text
-        const escapeHtml = (text) => {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        };
-        
-        // Check if action text is long (more than 60 characters - reduced for better UX)
-        const isLongEntry = actionText.length > 60;
-        // Only add expander on desktop (screens wider than 768px)
-        const isMobile = window.innerWidth <= 768;
-        const needsExpander = isLongEntry && !isMobile;
+    if (isFirstLoad) {
+        // First load: clear skeletons, stagger-animate all entries
+        logContent.innerHTML = '';
+        logs.forEach((log, idx) => {
+            const el = createLogEntry(log, true);
+            el.style.animationDelay = (idx * 30) + 'ms';
+            logContent.appendChild(el);
+        });
+    } else {
+        // Refresh: diff against existing entries
+        const existingKeys = new Set();
+        logContent.querySelectorAll('.log-entry').forEach(el => {
+            existingKeys.add(el.dataset.logKey);
+        });
 
-        // Add expandable class if needed
-        if (needsExpander) {
-            logEntry.classList.add('expandable');
-        }
+        // Find new entries (ones not already in the DOM)
+        const newLogs = logs.filter(log => !existingKeys.has(logEntryKey(log)));
 
-        // Create elements instead of using innerHTML for better control
-        const timestampSpan = document.createElement('span');
-        timestampSpan.className = 'timestamp';
-        timestampSpan.textContent = timestamp;
-        
-        const playerSpan = document.createElement('span');
-        playerSpan.className = 'player';
-        playerSpan.textContent = log.player;
-        
-        const actionSpan = document.createElement('span');
-        actionSpan.className = `action ${actionClass} ${isLongEntry ? 'truncated' : ''}`;
-        actionSpan.textContent = actionText;
-        
-        logEntry.appendChild(timestampSpan);
-        logEntry.appendChild(playerSpan);
-        logEntry.appendChild(actionSpan);
-        
-        // Add expand indicator if needed
-        if (needsExpander) {
-            const expandIndicator = document.createElement('span');
-            expandIndicator.className = 'expand-indicator';
-            expandIndicator.innerHTML = '<svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>';
-            logEntry.appendChild(expandIndicator);
-            
-            // Add click handler
-            logEntry.addEventListener('click', function() {
-                this.classList.toggle('expanded');
+        if (newLogs.length > 0) {
+            // Insert new entries at the top with animation
+            const fragment = document.createDocumentFragment();
+            newLogs.forEach(log => {
+                fragment.appendChild(createLogEntry(log, true));
             });
+            logContent.insertBefore(fragment, logContent.firstChild);
+
+            // Remove excess entries from the bottom to keep list size consistent
+            const maxEntries = logs.length;
+            while (logContent.querySelectorAll('.log-entry').length > maxEntries) {
+                const entries = logContent.querySelectorAll('.log-entry');
+                entries[entries.length - 1].remove();
+            }
         }
-        
-        logContent.appendChild(logEntry);
-    });
+    }
 }
 
 /**
