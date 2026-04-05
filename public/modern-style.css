@@ -2194,28 +2194,15 @@ main.transitioning {
 }
 
 .popup-meta-info {
-    background: var(--color-surface);
-    border-top: 1px solid var(--color-border);
-    padding: 12px 20px;
+    background: none;
+    border: none;
+    padding: 16px 20px 8px;
     margin: 0;
-    font-size: 0.75rem;
-    color: var(--color-text-tertiary);
+    font-size: 0.7rem;
+    color: var(--color-text-tertiary, #666);
     text-align: center;
     line-height: 1.4;
-    margin-top: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-.popup-meta-info::before {
-    content: '';
-    width: 4px;
-    height: 4px;
-    background: var(--color-text-tertiary);
-    border-radius: 50%;
-    opacity: 0.5;
+    opacity: 0.6;
 }
 
 /* Light theme adjustments for logs */
@@ -2250,7 +2237,7 @@ main.transitioning {
 }
 
 [data-theme="light"] .popup-meta-info {
-    background: #f8f9fa;
+    background: none;
 }
 
 /********************************************************
