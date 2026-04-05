@@ -759,7 +759,7 @@ h3 {
     width: 85%;
     max-width: 480px;
     color: var(--color-text);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    box-shadow: none;
     animation: scaleIn 0.3s ease-out;
     overflow: hidden;
 }
@@ -1023,6 +1023,7 @@ h3 {
 .popup-meta-info {
     font-size: 0.8em;
     text-align: center;
+    margin-top: 16px;
     margin-bottom: 10px;
 }
 
@@ -1041,7 +1042,7 @@ h3 {
 .modern-popup {
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    box-shadow: none;
     max-width: 500px;
     width: 90%;
 }

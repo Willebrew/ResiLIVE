@@ -317,8 +317,10 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    width: 100%;
+    width: calc(100% - 8px);
+    margin: 1px 4px;
     padding: 10px 12px;
+    border-radius: 8px;
     background: transparent;
     border: none;
     border-radius: var(--radius-sm);
@@ -1525,10 +1527,12 @@ main.transitioning {
     display: flex;
     align-items: center;
     gap: 12px;
-    width: 100%;
-    padding: 10px 16px;
+    width: calc(100% - 8px);
+    margin: 1px 4px;
+    padding: 10px 12px;
     background: transparent;
     border: none;
+    border-radius: 8px;
     color: var(--color-text);
     font-size: 14px;
     font-weight: 400;
