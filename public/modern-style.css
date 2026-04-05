@@ -2057,11 +2057,22 @@ main.transitioning {
     background: var(--color-border-light);
 }
 
-/* Log skeleton loading */
-@keyframes log-shimmer {
-    0% { background-position: -200px 0; }
-    100% { background-position: 200px 0; }
+/* Skeleton shimmer animation */
+@keyframes skeleton-shimmer {
+    0% { background-position: -600px 0; }
+    100% { background-position: 600px 0; }
 }
+
+/* Diagnostics fade-in transition */
+.diag-fadein {
+    animation: diagFadeIn 0.4s ease-out forwards;
+}
+@keyframes diagFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Log skeleton loading */
 .log-skeleton {
     display: flex;
     align-items: center;
@@ -2072,9 +2083,9 @@ main.transitioning {
 .log-skeleton-bar {
     height: 12px;
     border-radius: 6px;
-    background: linear-gradient(90deg, var(--color-border, #222) 25%, var(--color-surface-hover, #2a2a2a) 50%, var(--color-border, #222) 75%);
-    background-size: 400px 100%;
-    animation: log-shimmer 1.4s ease-in-out infinite;
+    background: linear-gradient(90deg, var(--color-border, #222) 0%, var(--color-border, #222) 35%, var(--color-surface-hover, #2a2a2a) 50%, var(--color-border, #222) 65%, var(--color-border, #222) 100%);
+    background-size: 1200px 100%;
+    animation: skeleton-shimmer 1.8s linear infinite;
 }
 .log-skeleton-bar.sk-time { width: 80px; flex-shrink: 0; }
 .log-skeleton-bar.sk-name { width: 100px; flex-shrink: 0; }
@@ -2082,9 +2093,9 @@ main.transitioning {
 
 /* Diagnostics skeleton loading */
 .diag-skeleton-card {
-    background: linear-gradient(90deg, var(--color-border, #222) 25%, var(--color-surface-hover, #2a2a2a) 50%, var(--color-border, #222) 75%);
-    background-size: 400px 100%;
-    animation: log-shimmer 1.4s ease-in-out infinite;
+    background: linear-gradient(90deg, var(--color-border, #222) 0%, var(--color-border, #222) 35%, var(--color-surface-hover, #2a2a2a) 50%, var(--color-border, #222) 65%, var(--color-border, #222) 100%);
+    background-size: 1200px 100%;
+    animation: skeleton-shimmer 1.8s linear infinite;
     border-radius: 10px;
     height: 80px;
 }

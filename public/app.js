@@ -1134,6 +1134,9 @@ function closeDiagnostics() {
     if (window.diagUpdateInterval) clearInterval(window.diagUpdateInterval);
     const popup = document.getElementById('diagnosticsPopup');
     if (popup) popup.classList.remove('popup-visible');
+    // Clear content so next open shows skeletons
+    const diagContent = document.getElementById('diagnosticsContent');
+    if (diagContent) diagContent.innerHTML = '';
 }
 
 async function updateDiagnostics(communityName) {
@@ -1152,15 +1155,23 @@ function renderDiagnostics(d) {
     const container = document.getElementById('diagnosticsContent');
     if (!container) return;
 
+    // Track previous state for smooth transitions
+    const wasOffline = !!container.querySelector('.diag-offline-notice');
+    const wasSkeleton = !!container.querySelector('.diag-skeleton-card');
+    const needsTransition = wasOffline || wasSkeleton;
+
     if (!d.online && !d.uptime) {
-        container.innerHTML = `
-            <div class="diag-offline-notice">
-                <svg width="48" height="48" viewBox="0 0 20 20" fill="currentColor" opacity="0.3">
-                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                </svg>
-                <p>No gateway connected to this community</p>
-                <span>The gateway device has not sent a heartbeat yet.</span>
-            </div>`;
+        // Only update if not already showing offline notice
+        if (!wasOffline) {
+            container.innerHTML = `
+                <div class="diag-offline-notice diag-fadein">
+                    <svg width="48" height="48" viewBox="0 0 20 20" fill="currentColor" opacity="0.3">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    <p>No gateway connected to this community</p>
+                    <span>The gateway device has not sent a heartbeat yet.</span>
+                </div>`;
+        }
         return;
     }
 
@@ -1227,7 +1238,7 @@ function renderDiagnostics(d) {
 
     const lastTagStatusClass = lastTagStatus === 'granted' ? 'diag-tag-granted' : (lastTagStatus === 'denied' ? 'diag-tag-denied' : '');
 
-    container.innerHTML = `
+    const cardsHtml = `
         <div class="diag-card diag-card-status ${statusClass}">
             <div class="diag-card-body">
                 <span class="diag-card-label">Gateway Status</span>
@@ -1292,6 +1303,13 @@ function renderDiagnostics(d) {
             </div>
         </div>
     `;
+
+    // If transitioning from skeleton/offline, fade in the new content
+    if (needsTransition) {
+        container.innerHTML = `<div class="diag-fadein">${cardsHtml}</div>`;
+    } else {
+        container.innerHTML = cardsHtml;
+    }
 
     // Set bar widths via JS to avoid CSP inline style violations
     container.querySelectorAll('.diag-bar-fill[data-width]').forEach(el => {
