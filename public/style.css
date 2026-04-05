@@ -1557,15 +1557,48 @@ button.address-open-gate-btn.loading::after {
 .diag-tag-granted { color: #22c55e !important; }
 .diag-tag-denied { color: #ef4444 !important; }
 
-/* Mobile responsive */
+/* Diagnostics responsive */
+@media (min-width: 601px) {
+    .diagnostics-content {
+        width: 90%;
+        max-width: 640px;
+    }
+}
 @media (max-width: 600px) {
+    .diagnostics-content {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        border-radius: 0;
+        min-height: 100vh;
+    }
+    .diagnostics-content .popup-body {
+        max-height: calc(100vh - 70px);
+        max-height: calc(100dvh - 70px);
+    }
     .diag-row {
         grid-template-columns: 1fr 1fr;
     }
     .diag-card-wide {
         grid-column: span 2;
     }
-    .diagnostics-content {
-        max-width: 100%;
+    .diag-card-status {
+        flex-wrap: wrap;
+    }
+    .diag-card-extra {
+        width: 100%;
+        text-align: left;
+        align-items: flex-start;
+        margin-top: 4px;
+        padding-top: 8px;
+        border-top: 1px solid var(--color-border, #333);
+    }
+}
+@media (max-width: 380px) {
+    .diag-row {
+        grid-template-columns: 1fr;
+    }
+    .diag-card-wide {
+        grid-column: span 1;
     }
 }

@@ -1092,7 +1092,7 @@ function showDiagnostics(communityName) {
         <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
         </svg>
-        ${communityName} — Gateway Diagnostics`;
+        ${communityName} - Gateway Diagnostics`;
     if (popup) popup.classList.add('popup-visible');
     updateDiagnostics(communityName);
 
@@ -1145,7 +1145,7 @@ function renderDiagnostics(d) {
     const statusText = online ? 'Online' : 'Offline';
     const statusDot = online ? 'diag-dot-online' : 'diag-dot-offline';
 
-    const uptimeStr = d.uptime || '—';
+    const uptimeStr = d.uptime || '-';
     const cpuPct = d.cpu != null ? d.cpu : null;
     const memUsed = d.memUsedMb != null ? d.memUsedMb : null;
     const memTotal = d.memTotalMb != null ? d.memTotalMb : null;
@@ -1160,15 +1160,15 @@ function renderDiagnostics(d) {
     const lastTagStatus = d.lastTagStatus || '';
     const firestoreStatus = d.firestoreConnected ? 'Connected' : 'Disconnected';
     const firestoreClass = d.firestoreConnected ? 'diag-val-good' : 'diag-val-bad';
-    const pendingLogs = d.pendingLogs != null ? d.pendingLogs : '—';
+    const pendingLogs = d.pendingLogs != null ? d.pendingLogs : '-';
     const pendingClass = (d.pendingLogs > 0) ? 'diag-val-warn' : 'diag-val-good';
     const serialStatus = d.serialConnected ? 'Connected' : 'Disconnected';
     const serialClass = d.serialConnected ? 'diag-val-good' : 'diag-val-bad';
-    const hostname = d.hostname || '—';
-    const ip = d.ip || '—';
+    const hostname = d.hostname || '-';
+    const ip = d.ip || '-';
 
     // WiFi signal quality mapping
-    let wifiQuality = '—';
+    let wifiQuality = '-';
     let wifiClass = 'diag-val-good';
     let wifiBars = 0;
     if (wifiSignal != null) {
@@ -1193,7 +1193,7 @@ function renderDiagnostics(d) {
     }
 
     // Last tag time formatting
-    let lastTagTimeStr = '—';
+    let lastTagTimeStr = '-';
     if (lastTagTime) {
         const ago = Math.round((Date.now() - lastTagTime) / 1000);
         if (ago < 60) lastTagTimeStr = `${ago}s ago`;
@@ -1219,18 +1219,18 @@ function renderDiagnostics(d) {
         <div class="diag-row">
             <div class="diag-card diag-card-sm">
                 <span class="diag-card-label">CPU</span>
-                <span class="diag-card-value ${cpuClass}">${cpuPct != null ? cpuPct + '%' : '—'}</span>
+                <span class="diag-card-value ${cpuClass}">${cpuPct != null ? cpuPct + '%' : '-'}</span>
                 <div class="diag-bar"><div class="diag-bar-fill ${cpuClass}" data-width="${cpuPct || 0}"></div></div>
             </div>
             <div class="diag-card diag-card-sm">
                 <span class="diag-card-label">Memory</span>
-                <span class="diag-card-value ${memClass}">${memPct != null ? memPct + '%' : '—'}</span>
+                <span class="diag-card-value ${memClass}">${memPct != null ? memPct + '%' : '-'}</span>
                 <div class="diag-bar"><div class="diag-bar-fill ${memClass}" data-width="${memPct || 0}"></div></div>
                 <span class="diag-card-sub">${memUsed != null ? memUsed + ' / ' + memTotal + ' MB' : ''}</span>
             </div>
             <div class="diag-card diag-card-sm">
                 <span class="diag-card-label">Disk</span>
-                <span class="diag-card-value">${diskPct != null ? diskPct + '%' : '—'}</span>
+                <span class="diag-card-value">${diskPct != null ? diskPct + '%' : '-'}</span>
                 <div class="diag-bar"><div class="diag-bar-fill" data-width="${diskPct || 0}"></div></div>
                 <span class="diag-card-sub">${diskUsed != null ? diskUsed + ' / ' + diskTotal + ' GB' : ''}</span>
             </div>
@@ -1263,7 +1263,7 @@ function renderDiagnostics(d) {
             </div>
             <div class="diag-card diag-card-wide">
                 <span class="diag-card-label">Last Tag Read</span>
-                <span class="diag-card-value-sm ${lastTagStatusClass}">${lastTag || '—'}</span>
+                <span class="diag-card-value-sm ${lastTagStatusClass}">${lastTag || '-'}</span>
                 <span class="diag-card-sub">${lastTagTimeStr}${lastTagStatus ? ' &bull; ' + lastTagStatus : ''}</span>
             </div>
         </div>
