@@ -226,10 +226,10 @@ app.use('/api', apiLimiter);
 
 // Apply CSRF protection to all other routes
 app.use((req, res, next) => {
-    if (req.path !== '/api/log-access') {
-        lusca.csrf()(req, res, next);
-    } else {
+    if (req.path === '/api/log-access' || req.path === '/api/gateway/heartbeat') {
         next();
+    } else {
+        lusca.csrf()(req, res, next);
     }
 });
 
