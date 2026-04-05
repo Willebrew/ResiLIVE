@@ -1061,12 +1061,15 @@ function showUsersPopup() {
  * Closes the log popup and clears the log update interval and auto-close timeout.
  */
 function closeLogPopup() {
-    if (window.logPopupTimeout) { clearTimeout(window.logPopupTimeout); } // Clear auto-close timeout
+    if (window.logPopupTimeout) { clearTimeout(window.logPopupTimeout); }
     const logPopupEl = document.getElementById('logPopup');
-    if (logPopupEl) logPopupEl.classList.remove('popup-visible'); // CSP Refactor
+    if (logPopupEl) logPopupEl.classList.remove('popup-visible');
     if (window.logUpdateInterval) {
-        clearInterval(window.logUpdateInterval); // Clear any potential polling interval
+        clearInterval(window.logUpdateInterval);
     }
+    // Clear content so next open shows skeletons + stagger animation
+    const logContent = document.getElementById('logContent');
+    if (logContent) logContent.innerHTML = '';
 }
 
 /**
