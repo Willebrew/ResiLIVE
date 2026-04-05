@@ -668,8 +668,8 @@ app.post('/api/login', strictLimiter, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ error: 'Error during login' });
+        console.error('Login error:', error.message, error.stack);
+        res.status(500).json({ error: 'Error during login', detail: error.message });
     }
 });
 
