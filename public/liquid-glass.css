@@ -51,7 +51,7 @@
     backdrop-filter: var(--liquid-blur-lg);
     -webkit-backdrop-filter: var(--liquid-blur-lg);
     border: 1px solid var(--liquid-border);
-    box-shadow: var(--liquid-shadow-lg);
+    box-shadow: none;
     animation: popupLiquidEntrance 0.4s ease-out;
 }
 
