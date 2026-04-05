@@ -1094,6 +1094,27 @@ function showDiagnostics(communityName) {
         </svg>
         ${communityName} - Gateway Diagnostics`;
     if (popup) popup.classList.add('popup-visible');
+
+    // Show skeleton loading on open
+    const diagContent = document.getElementById('diagnosticsContent');
+    if (diagContent && !diagContent.querySelector('.diag-card')) {
+        diagContent.innerHTML = `
+            <div class="diag-skeleton-card diag-skeleton-wide"></div>
+            <div class="diag-skeleton-row">
+                <div class="diag-skeleton-card"></div>
+                <div class="diag-skeleton-card"></div>
+                <div class="diag-skeleton-card"></div>
+            </div>
+            <div class="diag-skeleton-row">
+                <div class="diag-skeleton-card"></div>
+                <div class="diag-skeleton-card"></div>
+                <div class="diag-skeleton-card"></div>
+            </div>
+            <div class="diag-skeleton-row">
+                <div class="diag-skeleton-card"></div>
+                <div class="diag-skeleton-card diag-skeleton-2col"></div>
+            </div>`;
+    }
     updateDiagnostics(communityName);
 
     window.diagUpdateInterval = setInterval(() => {

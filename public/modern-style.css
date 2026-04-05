@@ -2080,6 +2080,34 @@ main.transitioning {
 .log-skeleton-bar.sk-name { width: 100px; flex-shrink: 0; }
 .log-skeleton-bar.sk-action { flex: 1; }
 
+/* Diagnostics skeleton loading */
+.diag-skeleton-card {
+    background: linear-gradient(90deg, var(--color-border, #222) 25%, var(--color-surface-hover, #2a2a2a) 50%, var(--color-border, #222) 75%);
+    background-size: 400px 100%;
+    animation: log-shimmer 1.4s ease-in-out infinite;
+    border-radius: 10px;
+    height: 80px;
+}
+.diag-skeleton-wide {
+    height: 110px;
+}
+.diag-skeleton-2col {
+    grid-column: span 2;
+}
+.diag-skeleton-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+@media (max-width: 600px) {
+    .diag-skeleton-row {
+        grid-template-columns: 1fr 1fr;
+    }
+    .diag-skeleton-2col {
+        grid-column: span 2;
+    }
+}
+
 .log-entry-fadein {
     animation: logFadeIn 0.3s ease-out forwards;
     opacity: 0;
