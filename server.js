@@ -159,8 +159,12 @@ app.use(cors({
     origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
-        
-        if (allowedOrigins.indexOf(origin) !== -1) {
+
+        // Allow same-site requests (custom domains pointing to this server)
+        if (allowedOrigins.indexOf(origin) !== -1 ||
+            origin === 'https://resilive.net' ||
+            origin === 'https://www.resilive.net' ||
+            origin.endsWith('.onrender.com')) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
