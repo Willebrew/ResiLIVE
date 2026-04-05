@@ -1392,29 +1392,40 @@ button.address-open-gate-btn.loading::after {
     gap: 12px;
 }
 .diag-card-status {
-    border-left: 3px solid transparent;
+    position: relative;
+    overflow: hidden;
 }
 .diag-card-status.diag-status-online {
-    border-left-color: #22c55e;
+    background: linear-gradient(135deg, rgba(34,197,94,0.08) 0%, var(--color-bg, #111) 60%);
 }
 .diag-card-status.diag-status-offline {
-    border-left-color: #ef4444;
+    background: linear-gradient(135deg, rgba(239,68,68,0.08) 0%, var(--color-bg, #111) 60%);
 }
-
-.diag-card-icon {
-    display: flex;
+.diag-status-badge {
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    flex-shrink: 0;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+.diag-status-online .diag-status-badge {
+    background: rgba(34,197,94,0.15);
+    color: #22c55e;
+}
+.diag-status-offline .diag-status-badge {
+    background: rgba(239,68,68,0.15);
+    color: #ef4444;
 }
 
 .diag-dot {
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     display: inline-block;
+    flex-shrink: 0;
 }
 .diag-dot-online {
     background: #22c55e;

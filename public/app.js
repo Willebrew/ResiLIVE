@@ -1205,12 +1205,9 @@ function renderDiagnostics(d) {
 
     container.innerHTML = `
         <div class="diag-card diag-card-status ${statusClass}">
-            <div class="diag-card-icon">
-                <span class="diag-dot ${statusDot}"></span>
-            </div>
             <div class="diag-card-body">
                 <span class="diag-card-label">Gateway Status</span>
-                <span class="diag-card-value">${statusText}</span>
+                <span class="diag-status-badge"><span class="diag-dot ${statusDot}"></span>${statusText}</span>
                 <span class="diag-card-sub">${hostname} &bull; ${ip}</span>
             </div>
             <div class="diag-card-extra">
@@ -1223,18 +1220,18 @@ function renderDiagnostics(d) {
             <div class="diag-card diag-card-sm">
                 <span class="diag-card-label">CPU</span>
                 <span class="diag-card-value ${cpuClass}">${cpuPct != null ? cpuPct + '%' : '—'}</span>
-                <div class="diag-bar"><div class="diag-bar-fill ${cpuClass}" style="width:${cpuPct || 0}%"></div></div>
+                <div class="diag-bar"><div class="diag-bar-fill ${cpuClass}" data-width="${cpuPct || 0}"></div></div>
             </div>
             <div class="diag-card diag-card-sm">
                 <span class="diag-card-label">Memory</span>
                 <span class="diag-card-value ${memClass}">${memPct != null ? memPct + '%' : '—'}</span>
-                <div class="diag-bar"><div class="diag-bar-fill ${memClass}" style="width:${memPct || 0}%"></div></div>
+                <div class="diag-bar"><div class="diag-bar-fill ${memClass}" data-width="${memPct || 0}"></div></div>
                 <span class="diag-card-sub">${memUsed != null ? memUsed + ' / ' + memTotal + ' MB' : ''}</span>
             </div>
             <div class="diag-card diag-card-sm">
                 <span class="diag-card-label">Disk</span>
                 <span class="diag-card-value">${diskPct != null ? diskPct + '%' : '—'}</span>
-                <div class="diag-bar"><div class="diag-bar-fill" style="width:${diskPct || 0}%"></div></div>
+                <div class="diag-bar"><div class="diag-bar-fill" data-width="${diskPct || 0}"></div></div>
                 <span class="diag-card-sub">${diskUsed != null ? diskUsed + ' / ' + diskTotal + ' GB' : ''}</span>
             </div>
         </div>
@@ -1271,6 +1268,11 @@ function renderDiagnostics(d) {
             </div>
         </div>
     `;
+
+    // Set bar widths via JS to avoid CSP inline style violations
+    container.querySelectorAll('.diag-bar-fill[data-width]').forEach(el => {
+        el.style.width = el.dataset.width + '%';
+    });
 }
 
 /**
